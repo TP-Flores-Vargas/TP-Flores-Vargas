@@ -13,7 +13,7 @@
                 <h1>Portal de Administración de Red</h1>
                 <p>Acceso exclusivo para administradores autorizados.</p>
             </header>
-            <form class="login-form" action="#" method="post">
+            <form class="login-form" id="loginForm" action="#" method="post">
                 <div class="input-group">
                     <label for="username">Usuario</label>
                     <input type="text" id="username" name="username" placeholder="admin@empresa.com" autocomplete="username" required>
@@ -56,5 +56,29 @@
             </div>
         </aside>
     </main>
+    <script>
+        const loginForm = document.getElementById('loginForm');
+
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                alert('Por favor, complete sus credenciales para continuar.');
+                return;
+            }
+
+            const dashboardWindow = window.open('dashboard.html', '_blank', 'noopener');
+
+            if (!dashboardWindow) {
+                alert('No se pudo abrir el panel. Por favor, permita ventanas emergentes para este sitio.');
+                return;
+            }
+
+            dashboardWindow.focus();
+        });
+    </script>
 </body>
 </html>

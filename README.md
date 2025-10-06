@@ -19,6 +19,8 @@ Este repositorio contiene una interfaz de inicio de sesión diseñada para un po
 
 3. El script abrirá automáticamente tu navegador predeterminado en la página `login.html`. Si no se abre, accede manualmente a `http://localhost:8000/login.html` (o al puerto que hayas definido).
 
+   Al completar el formulario de acceso se validará que ingreses ambos campos y, una vez aceptado, se abrirá una nueva ventana con el panel de dashboards de referencia.
+
 ## Publicar en GitHub Pages
 
 Si quieres hacer público el portal directamente desde GitHub, sigue estos pasos:
@@ -31,7 +33,8 @@ Si quieres hacer público el portal directamente desde GitHub, sigue estos pasos
 
 ## Estructura
 
-- `web/login.html`: Página principal del portal.
+- `web/login.html`: Página principal del portal con formulario que lanza el panel en una nueva ventana.
+- `web/dashboard.html`: Panel demostrativo con tarjetas informativas para el monitoreo de red.
 - `web/styles.css`: Estilos personalizados del portal.
 - `serve_login.py`: Script ligero para desplegar la interfaz en un entorno local.
 - `.github/workflows/deploy.yml`: Flujo de trabajo que publica la carpeta `web` en GitHub Pages.
