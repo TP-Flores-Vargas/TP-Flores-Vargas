@@ -19,11 +19,22 @@ Este repositorio contiene una interfaz de inicio de sesión diseñada para un po
 
 3. El script abrirá automáticamente tu navegador predeterminado en la página `login.html`. Si no se abre, accede manualmente a `http://localhost:8000/login.html` (o al puerto que hayas definido).
 
+## Publicar en GitHub Pages
+
+Si quieres hacer público el portal directamente desde GitHub, sigue estos pasos:
+
+1. Crea un repositorio en GitHub y sube el contenido de este proyecto.
+2. Asegúrate de que tu rama principal se llama `main` o ajusta el flujo de trabajo en `.github/workflows/deploy.yml` para que apunte a la rama adecuada.
+3. En GitHub, ve a **Settings → Pages** y selecciona **GitHub Actions** como fuente de despliegue.
+4. A partir de ahora, cada `git push` a `main` ejecutará el flujo de trabajo **Deploy login portal to GitHub Pages**, el cual publicará el contenido de la carpeta `web` en GitHub Pages.
+5. Una vez completado el despliegue, encontrarás la URL pública en la pestaña **Actions** o en la sección **Environments** del repositorio.
+
 ## Estructura
 
 - `web/login.html`: Página principal del portal.
 - `web/styles.css`: Estilos personalizados del portal.
 - `serve_login.py`: Script ligero para desplegar la interfaz en un entorno local.
+- `.github/workflows/deploy.yml`: Flujo de trabajo que publica la carpeta `web` en GitHub Pages.
 
 ## Créditos
 
