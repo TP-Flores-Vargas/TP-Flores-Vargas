@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Administración de Red - Inicio de Sesión</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="login-wrapper">
+        <section class="login-card">
+            <header class="login-header">
+                <h1>Portal de Administración de Red</h1>
+                <p>Acceso exclusivo para administradores autorizados.</p>
+            </header>
+            <form class="login-form" action="#" method="post">
+                <div class="input-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" name="username" placeholder="admin@empresa.com" autocomplete="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+                </div>
+                <div class="options">
+                    <label class="remember">
+                        <input type="checkbox" name="remember" id="remember">
+                        Mantener sesión iniciada
+                    </label>
+                    <a class="help-link" href="#">¿Olvidaste tu contraseña?</a>
+                </div>
+                <button type="submit" class="login-button">Iniciar sesión</button>
+            </form>
+            <footer class="login-footer">
+                <h2>Política de uso aceptable</h2>
+                <p>El uso de este sistema está monitoreado y restringido únicamente al personal de la División de Seguridad de la Información.</p>
+                <ul>
+                    <li>Accede únicamente desde estaciones de trabajo autorizadas.</li>
+                    <li>Protege tus credenciales y no las compartas.</li>
+                    <li>Reporta cualquier actividad sospechosa al Centro de Operaciones de Seguridad.</li>
+                </ul>
+            </footer>
+        </section>
+        <aside class="login-info">
+            <div class="status-indicator">
+                <span class="status-led"></span>
+                <span>Estado de la red: Operativa</span>
+            </div>
+            <div class="info-card">
+                <h3>Horario de mantenimiento</h3>
+                <p>Martes y jueves de 22:00 a 02:00 (GMT-5). Durante ese periodo el acceso puede verse interrumpido.</p>
+            </div>
+            <div class="info-card">
+                <h3>Contacto de emergencia</h3>
+                <p>Centro de Operaciones de Seguridad<br>+51 1 555 0101<br>soc@empresa.edu.pe</p>
+            </div>
+        </aside>
+    </main>
+</body>
+</html>
