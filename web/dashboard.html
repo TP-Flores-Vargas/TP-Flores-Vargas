@@ -10,36 +10,255 @@
     <header class="dashboard-header">
         <h1>Panel Principal de Monitoreo</h1>
         <p>Bienvenido, administrador. Aquí encontrarás los indicadores clave de tu red.</p>
+        <div class="header-meta">
+            <span class="badge badge-success">Red estable</span>
+            <span class="badge badge-warning">Ventana de mantenimiento programada en 4h</span>
+            <span class="badge">Última sincronización: 12:25:18</span>
+        </div>
     </header>
-    <main class="dashboard-grid">
-        <section class="dashboard-card">
-            <h2>Estado de la Red</h2>
-            <p class="status-ok">Operativa</p>
-            <p>Todos los segmentos están respondiendo sin incidencias críticas.</p>
+
+    <main class="dashboard-layout">
+        <section class="metric-grid">
+            <article class="metric-card">
+                <header class="metric-card-header">
+                    <h2>Disponibilidad global</h2>
+                    <span class="metric-trend trend-up">+0.6%</span>
+                </header>
+                <p class="metric-value">99.982%</p>
+                <p class="metric-caption">Comparado con el promedio de la última semana.</p>
+            </article>
+            <article class="metric-card">
+                <header class="metric-card-header">
+                    <h2>Latencia promedio</h2>
+                    <span class="metric-trend trend-down">-4 ms</span>
+                </header>
+                <p class="metric-value">21 ms</p>
+                <p class="metric-caption">Matriz Lima ↔ Filiales regionales.</p>
+            </article>
+            <article class="metric-card">
+                <header class="metric-card-header">
+                    <h2>Uso de ancho de banda</h2>
+                    <span class="metric-trend trend-up">72%</span>
+                </header>
+                <p class="metric-value">12.4 Gbps</p>
+                <p class="metric-caption">Pico observado en los últimos 5 minutos.</p>
+            </article>
+            <article class="metric-card">
+                <header class="metric-card-header">
+                    <h2>Incidentes activos</h2>
+                    <span class="metric-trend trend-stable">0 críticos</span>
+                </header>
+                <p class="metric-value">5 abiertos</p>
+                <p class="metric-caption">Seguimiento conjunto con el SOC.</p>
+            </article>
         </section>
-        <section class="dashboard-card">
-            <h2>Alertas en Tiempo Real</h2>
-            <ul>
-                <li>0 eventos críticos en los últimos 15 minutos.</li>
-                <li>3 advertencias pendientes de revisión.</li>
-                <li>8 notificaciones informativas.</li>
-            </ul>
-        </section>
-        <section class="dashboard-card">
-            <h2>Próximas Tareas</h2>
-            <ol>
-                <li>Revisión de reglas del firewall perimetral.</li>
-                <li>Actualización de firmas IDS en zona DMZ.</li>
-                <li>Validación de respaldos incrementales nocturnos.</li>
-            </ol>
-        </section>
-        <section class="dashboard-card">
-            <h2>Recursos Rápidos</h2>
-            <p>
-                <a href="#" class="dashboard-link">Centro de Operaciones de Seguridad</a><br>
-                <a href="#" class="dashboard-link">Documentación de protocolos</a><br>
-                <a href="#" class="dashboard-link">Solicitar escalamiento</a>
-            </p>
+
+        <section class="dashboard-grid">
+            <section class="dashboard-card">
+                <h2>Estado de la Red</h2>
+                <p class="status-ok">Operativa</p>
+                <p>Todos los segmentos están respondiendo sin incidencias críticas.</p>
+                <div class="chip-list">
+                    <span class="chip chip-success">Core estable</span>
+                    <span class="chip chip-warning">VPN cercana al umbral</span>
+                    <span class="chip">Wi-Fi invitado en modo supervisión</span>
+                </div>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Alertas en Tiempo Real</h2>
+                <ul>
+                    <li>0 eventos críticos en los últimos 15 minutos.</li>
+                    <li>3 advertencias pendientes de revisión.</li>
+                    <li>8 notificaciones informativas.</li>
+                </ul>
+                <a href="#" class="dashboard-link">Ver consola de eventos</a>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Próximas Tareas</h2>
+                <ol>
+                    <li>Revisión de reglas del firewall perimetral.</li>
+                    <li>Actualización de firmas IDS en zona DMZ.</li>
+                    <li>Validación de respaldos incrementales nocturnos.</li>
+                </ol>
+                <div class="chip-list">
+                    <span class="chip">Asignado a: Equipo Azul</span>
+                    <span class="chip">Prioridad: Alta</span>
+                </div>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Accesos y sesiones</h2>
+                <p class="metric-caption">Distribución de sesiones activas por entorno:</p>
+                <div class="progress-group">
+                    <div class="progress-item">
+                        <span>Producción</span>
+                        <div class="progress-bar">
+                            <span class="progress-fill" style="width: 78%"></span>
+                        </div>
+                        <span class="progress-value">78 usuarios</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>Laboratorio</span>
+                        <div class="progress-bar">
+                            <span class="progress-fill warning" style="width: 46%"></span>
+                        </div>
+                        <span class="progress-value">23 usuarios</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>Invitados</span>
+                        <div class="progress-bar">
+                            <span class="progress-fill danger" style="width: 18%"></span>
+                        </div>
+                        <span class="progress-value">9 usuarios</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-card wide-card">
+                <h2>Servicios críticos</h2>
+                <div class="table-wrapper">
+                    <table class="status-table">
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Disponibilidad</th>
+                                <th>Latencia</th>
+                                <th>Última verificación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>DNS Primario</td>
+                                <td><span class="chip chip-success">99.99%</span></td>
+                                <td>12 ms</td>
+                                <td>Hace 2 min</td>
+                            </tr>
+                            <tr>
+                                <td>VPN Corporativa</td>
+                                <td><span class="chip chip-warning">98.4%</span></td>
+                                <td>38 ms</td>
+                                <td>Hace 3 min</td>
+                            </tr>
+                            <tr>
+                                <td>Correo Institucional</td>
+                                <td><span class="chip chip-success">100%</span></td>
+                                <td>25 ms</td>
+                                <td>Hace 1 min</td>
+                            </tr>
+                            <tr>
+                                <td>Portal Académico</td>
+                                <td><span class="chip">99.1%</span></td>
+                                <td>31 ms</td>
+                                <td>Hace 5 min</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="dashboard-card wide-card">
+                <h2>Cronología de incidentes</h2>
+                <ul class="timeline">
+                    <li class="timeline-item">
+                        <span class="timeline-time">12:12</span>
+                        <div>
+                            <p class="timeline-title">IDS - alerta de escaneo mitigada</p>
+                            <p class="timeline-caption">IP origen bloqueada automáticamente por el firewall.</p>
+                        </div>
+                    </li>
+                    <li class="timeline-item">
+                        <span class="timeline-time">10:47</span>
+                        <div>
+                            <p class="timeline-title">Actualización de parches aplicados</p>
+                            <p class="timeline-caption">Servidores de autenticación federada reiniciados sin incidencias.</p>
+                        </div>
+                    </li>
+                    <li class="timeline-item">
+                        <span class="timeline-time">09:15</span>
+                        <div>
+                            <p class="timeline-title">Monitoreo de disponibilidad</p>
+                            <p class="timeline-caption">Latencia en enlaces internacionales volvió a valores nominales.</p>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Equipo de turno</h2>
+                <ul class="oncall-list">
+                    <li>
+                        <span class="avatar" aria-hidden="true">AR</span>
+                        <div>
+                            <p class="oncall-name">Andrea Rivas</p>
+                            <p class="oncall-role">Coordinadora SOC · Disponible</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="avatar" aria-hidden="true">JM</span>
+                        <div>
+                            <p class="oncall-name">Jorge Montalvo</p>
+                            <p class="oncall-role">Especialista Redes · Tiempo de respuesta 8 min</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="avatar" aria-hidden="true">LC</span>
+                        <div>
+                            <p class="oncall-name">Lucía Carranza</p>
+                            <p class="oncall-role">Analista Seguridad · Stand-by</p>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Acciones rápidas</h2>
+                <div class="action-grid">
+                    <button type="button" class="action-button">Aplicar política de cuarentena</button>
+                    <button type="button" class="action-button">Generar informe PDF</button>
+                    <button type="button" class="action-button">Notificar a supervisores</button>
+                    <button type="button" class="action-button">Abrir consola de automatización</button>
+                </div>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Índice de cumplimiento</h2>
+                <p class="metric-caption">Controles auditados este trimestre.</p>
+                <div class="compliance-list">
+                    <div class="progress-item">
+                        <span>ISO 27001</span>
+                        <div class="progress-bar">
+                            <span class="progress-fill" style="width: 92%"></span>
+                        </div>
+                        <span class="progress-value">92% completado</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>NIST CSF</span>
+                        <div class="progress-bar">
+                            <span class="progress-fill warning" style="width: 68%"></span>
+                        </div>
+                        <span class="progress-value">Revisión en curso</span>
+                    </div>
+                    <div class="progress-item">
+                        <span>Política interna</span>
+                        <div class="progress-bar">
+                            <span class="progress-fill success" style="width: 100%"></span>
+                        </div>
+                        <span class="progress-value">Actualizada</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-card">
+                <h2>Recursos Rápidos</h2>
+                <p>
+                    <a href="#" class="dashboard-link">Centro de Operaciones de Seguridad</a><br>
+                    <a href="#" class="dashboard-link">Documentación de protocolos</a><br>
+                    <a href="#" class="dashboard-link">Solicitar escalamiento</a>
+                </p>
+                <p class="metric-caption">Mantén estos enlaces como referencia ante cualquier eventualidad.</p>
+            </section>
         </section>
     </main>
 </body>
