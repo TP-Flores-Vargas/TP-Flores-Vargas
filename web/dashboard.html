@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Monitoreo de Red</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="demo.js" defer></script>
 </head>
 <body class="dashboard-body">
     <header class="dashboard-header">
@@ -15,6 +16,10 @@
             <span class="badge badge-warning">Ventana de mantenimiento programada en 4h</span>
             <span class="badge">Última sincronización: 12:25:18</span>
         </div>
+        <div class="demo-controls" role="region" aria-label="Controles de demostración">
+            <button type="button" class="demo-button" id="demoPlay">🎬 Reproducir demo</button>
+            <button type="button" class="demo-button secondary" id="demoReset" disabled>⟲ Reiniciar</button>
+        </div>
     </header>
 
     <main class="dashboard-layout">
@@ -22,39 +27,39 @@
             <article class="metric-card">
                 <header class="metric-card-header">
                     <h2>Disponibilidad global</h2>
-                    <span class="metric-trend trend-up">+0.6%</span>
+                    <span class="metric-trend trend-up" data-demo-id="availabilityTrend">+0.6%</span>
                 </header>
-                <p class="metric-value">99.982%</p>
+                <p class="metric-value" data-demo-id="availabilityValue">99.982%</p>
                 <p class="metric-caption">Comparado con el promedio de la última semana.</p>
             </article>
             <article class="metric-card">
                 <header class="metric-card-header">
                     <h2>Latencia promedio</h2>
-                    <span class="metric-trend trend-down">-4 ms</span>
+                    <span class="metric-trend trend-down" data-demo-id="latencyTrend">-4 ms</span>
                 </header>
-                <p class="metric-value">21 ms</p>
+                <p class="metric-value" data-demo-id="latencyValue">21 ms</p>
                 <p class="metric-caption">Matriz Lima ↔ Filiales regionales.</p>
             </article>
             <article class="metric-card">
                 <header class="metric-card-header">
                     <h2>Uso de ancho de banda</h2>
-                    <span class="metric-trend trend-up">72%</span>
+                    <span class="metric-trend trend-up" data-demo-id="bandwidthTrend">72%</span>
                 </header>
-                <p class="metric-value">12.4 Gbps</p>
+                <p class="metric-value" data-demo-id="bandwidthValue">12.4 Gbps</p>
                 <p class="metric-caption">Pico observado en los últimos 5 minutos.</p>
             </article>
             <article class="metric-card">
                 <header class="metric-card-header">
                     <h2>Incidentes activos</h2>
-                    <span class="metric-trend trend-stable">0 críticos</span>
+                    <span class="metric-trend trend-stable" data-demo-id="incidentsTrend">0 críticos</span>
                 </header>
-                <p class="metric-value">5 abiertos</p>
+                <p class="metric-value" data-demo-id="incidentsValue">5 abiertos</p>
                 <p class="metric-caption">Seguimiento conjunto con el SOC.</p>
             </article>
         </section>
 
         <section class="dashboard-grid">
-            <section class="dashboard-card">
+            <section class="dashboard-card" id="estado-red">
                 <h2>Estado de la Red</h2>
                 <p class="status-ok">Operativa</p>
                 <p>Todos los segmentos están respondiendo sin incidencias críticas.</p>
@@ -65,12 +70,12 @@
                 </div>
             </section>
 
-            <section class="dashboard-card">
+            <section class="dashboard-card" id="alertas-tiempo-real">
                 <h2>Alertas en Tiempo Real</h2>
                 <ul>
-                    <li>0 eventos críticos en los últimos 15 minutos.</li>
-                    <li>3 advertencias pendientes de revisión.</li>
-                    <li>8 notificaciones informativas.</li>
+                    <li data-demo-id="alertCritical">0 eventos críticos en los últimos 15 minutos.</li>
+                    <li data-demo-id="alertWarning">3 advertencias pendientes de revisión.</li>
+                    <li data-demo-id="alertInfo">8 notificaciones informativas.</li>
                 </ul>
                 <a href="#" class="dashboard-link">Ver consola de eventos</a>
             </section>
@@ -88,35 +93,35 @@
                 </div>
             </section>
 
-            <section class="dashboard-card">
+            <section class="dashboard-card" id="accesos-sesiones">
                 <h2>Accesos y sesiones</h2>
                 <p class="metric-caption">Distribución de sesiones activas por entorno:</p>
                 <div class="progress-group">
                     <div class="progress-item">
                         <span>Producción</span>
                         <div class="progress-bar">
-                            <span class="progress-fill" style="width: 78%"></span>
+                            <span class="progress-fill" style="width: 78%" data-demo-id="sessionsProduction" data-demo-track-style="width"></span>
                         </div>
-                        <span class="progress-value">78 usuarios</span>
+                        <span class="progress-value" data-demo-id="sessionsProductionValue">78 usuarios</span>
                     </div>
                     <div class="progress-item">
                         <span>Laboratorio</span>
                         <div class="progress-bar">
-                            <span class="progress-fill warning" style="width: 46%"></span>
+                            <span class="progress-fill warning" style="width: 46%" data-demo-id="sessionsLab" data-demo-track-style="width"></span>
                         </div>
-                        <span class="progress-value">23 usuarios</span>
+                        <span class="progress-value" data-demo-id="sessionsLabValue">23 usuarios</span>
                     </div>
                     <div class="progress-item">
                         <span>Invitados</span>
                         <div class="progress-bar">
-                            <span class="progress-fill danger" style="width: 18%"></span>
+                            <span class="progress-fill danger" style="width: 18%" data-demo-id="sessionsGuest" data-demo-track-style="width"></span>
                         </div>
-                        <span class="progress-value">9 usuarios</span>
+                        <span class="progress-value" data-demo-id="sessionsGuestValue">9 usuarios</span>
                     </div>
                 </div>
             </section>
 
-            <section class="dashboard-card wide-card">
+            <section class="dashboard-card wide-card" id="servicios-criticos">
                 <h2>Servicios críticos</h2>
                 <div class="table-wrapper">
                     <table class="status-table">
@@ -137,9 +142,9 @@
                             </tr>
                             <tr>
                                 <td>VPN Corporativa</td>
-                                <td><span class="chip chip-warning">98.4%</span></td>
-                                <td>38 ms</td>
-                                <td>Hace 3 min</td>
+                                <td><span class="chip chip-warning" data-demo-id="vpnChip" data-demo-track-class="true">98.4%</span></td>
+                                <td data-demo-id="vpnLatency">38 ms</td>
+                                <td data-demo-id="vpnCheck">Hace 3 min</td>
                             </tr>
                             <tr>
                                 <td>Correo Institucional</td>
@@ -160,8 +165,8 @@
 
             <section class="dashboard-card wide-card">
                 <h2>Cronología de incidentes</h2>
-                <ul class="timeline">
-                    <li class="timeline-item">
+                <ul class="timeline" id="incidentTimeline">
+                    <li class="timeline-item" data-demo-id="timelineFirst">
                         <span class="timeline-time">12:12</span>
                         <div>
                             <p class="timeline-title">IDS - alerta de escaneo mitigada</p>
@@ -185,7 +190,7 @@
                 </ul>
             </section>
 
-            <section class="dashboard-card">
+            <section class="dashboard-card" id="equipo-turno">
                 <h2>Equipo de turno</h2>
                 <ul class="oncall-list">
                     <li>
@@ -212,7 +217,7 @@
                 </ul>
             </section>
 
-            <section class="dashboard-card">
+            <section class="dashboard-card" id="acciones-rapidas">
                 <h2>Acciones rápidas</h2>
                 <div class="action-grid">
                     <button type="button" class="action-button">Aplicar política de cuarentena</button>
@@ -222,28 +227,28 @@
                 </div>
             </section>
 
-            <section class="dashboard-card">
+            <section class="dashboard-card" id="indice-cumplimiento">
                 <h2>Índice de cumplimiento</h2>
                 <p class="metric-caption">Controles auditados este trimestre.</p>
                 <div class="compliance-list">
                     <div class="progress-item">
                         <span>ISO 27001</span>
                         <div class="progress-bar">
-                            <span class="progress-fill" style="width: 92%"></span>
+                            <span class="progress-fill" style="width: 92%" data-demo-id="isoProgress" data-demo-track-style="width"></span>
                         </div>
                         <span class="progress-value">92% completado</span>
                     </div>
                     <div class="progress-item">
                         <span>NIST CSF</span>
                         <div class="progress-bar">
-                            <span class="progress-fill warning" style="width: 68%"></span>
+                            <span class="progress-fill warning" style="width: 68%" data-demo-id="nistProgress" data-demo-track-style="width"></span>
                         </div>
-                        <span class="progress-value">Revisión en curso</span>
+                        <span class="progress-value" data-demo-id="nistProgressValue">Revisión en curso</span>
                     </div>
                     <div class="progress-item">
                         <span>Política interna</span>
                         <div class="progress-bar">
-                            <span class="progress-fill success" style="width: 100%"></span>
+                            <span class="progress-fill success" style="width: 100%" data-demo-id="policyProgress" data-demo-track-style="width"></span>
                         </div>
                         <span class="progress-value">Actualizada</span>
                     </div>
@@ -261,5 +266,7 @@
             </section>
         </section>
     </main>
+    <div class="demo-narration" id="demoNarration" role="status" aria-live="polite"></div>
+    <div class="demo-toast-stack" id="demoToastStack" aria-live="assertive"></div>
 </body>
 </html>
