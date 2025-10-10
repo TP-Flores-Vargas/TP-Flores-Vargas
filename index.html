@@ -1,586 +1,71 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mockup | Sistema IDS Educativo</title>
-    <style>
-        @import url('https://rsms.me/inter/inter.css');
-        html { font-family: 'Inter', sans-serif; }
-        body { background-color: #111827; }
-        .recharts-tooltip-cursor { fill: rgba(255, 255, 255, 0.1) !important; }
-        .recharts-text { fill: #9ca3af !important; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .modal-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup | Sistema IDS Educativo</title>
+  <link rel="stylesheet" href="./src/styles/index.css" />
 </head>
 <body>
-    <div id="root">
-        <div class="flex items-center justify-center min-h-screen bg-gray-900 text-white animate-pulse">
-            Cargando aplicación....
-        </div>
+  <div id="root">
+    <div class="flex items-center justify-center min-h-screen bg-gray-900 text-white animate-pulse">
+      Cargando aplicación...
     </div>
+  </div>
 
-    <!-- Scripts externos primero -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/es.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/es.js"></script>
 
-    <!-- Tu script Babel al final -->
-    <script type="text/babel" data-presets="react,env">
-        const { useState, useEffect, useMemo } = React;
-        
-        dayjs.extend(dayjs_plugin_relativeTime);
-        dayjs.locale('es');
+  <!-- Datos mock y configuración -->
+  <script type="text/babel" data-presets="react,env" src="./src/services/mocks/mockAlerts.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/services/mocks/helpContent.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/config/constants.js"></script>
 
-        // --- Iconos SVG ---
-        const ShieldIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>);
-        const LayoutDashboardIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>);
-        const BellIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>);
-        const FileTextIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>);
-        const SettingsIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.82l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1 0-2.82l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
-        const HelpCircleIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
-        const LogOutIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>);
-        const XCircleIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>);
-        const AlertTriangleIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
-        const CheckCircleIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>);
-        const ChevronDownIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>;
+  <!-- Utilidades y activos -->
+  <script type="text/babel" data-presets="react,env" src="./src/utils/formatDate.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/utils/formatBytes.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/utils/severityMap.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/assets/icons/index.js"></script>
 
-        const mockAlerts = [
-            { id: 1, timestamp: '2025-10-09T21:10:00', criticidad: 'Alta', tipo: 'Malware Detectado', ipOrigen: '192.168.1.105', ipDestino: '104.18.32.229', puertoDestino: 443, protocolo: 'TCP', detalles: 'Se detectó tráfico consistente con el troyano "Emotet". El equipo está intentando contactar a un servidor de Comando y Control (C&C).', recomendacion: '1. **Aislar el equipo:** Desconecte inmediatamente el computador con la IP 192.168.1.105 de la red (cable y WiFi). \n 2. **Analizar con antivirus:** Ejecute un análisis completo y actualizado del antivirus en el equipo afectado. \n 3. **Cambiar credenciales:** Si el usuario del equipo ha iniciado sesión en cuentas importantes, cambie sus contraseñas desde un equipo limpio.' },
-            { id: 2, timestamp: '2025-10-09T20:45:12', criticidad: 'Media', tipo: 'Escaneo de Puertos', ipOrigen: '200.48.225.10', ipDestino: '192.168.1.1', puertoDestino: '1-1024', protocolo: 'TCP', detalles: 'Una IP externa está escaneando múltiples puertos en el router principal de la escuela. Esto suele ser una fase de reconocimiento previa a un ataque.', recomendacion: '1. **Monitorear la IP:** Vigile la actividad de la IP 200.48.225.10. Si persiste, considere bloquearla. \n 2. **Revisar reglas del Firewall:** Asegúrese de que solo los puertos necesarios estén abiertos al exterior en la configuración del router. \n 3. **No se requiere acción inmediata** si el escaneo se detiene, pero manténgase alerta.' },
-            { id: 3, timestamp: '2025-10-09T18:15:30', criticidad: 'Baja', tipo: 'Política de Red Violada', ipOrigen: '192.168.1.112', ipDestino: 'N/A', puertoDestino: 'N/A', protocolo: 'P2P', detalles: 'Se detectó tráfico de tipo Peer-to-Peer (BitTorrent), el cual consume mucho ancho de banda y puede ser una fuente de malware.', recomendacion: '1. **Identificar al usuario:** Corresponde al equipo del laboratorio de computación. \n 2. **Comunicar la política:** Recuerde al usuario o al responsable del aula que el uso de aplicaciones P2P no está permitido. \n 3. **Considerar bloqueo:** Si la actividad persiste, se puede configurar el firewall para bloquear este tipo de tráfico.' },
-            { id: 4, timestamp: '2025-10-08T11:05:00', criticidad: 'Alta', tipo: 'Intento de Phishing', ipOrigen: '185.125.218.45', ipDestino: '192.168.1.50', puertoDestino: 25, protocolo: 'SMTP', detalles: 'Se detectó un correo electrónico entrante desde una IP maliciosa conocida que contenía un enlace a un sitio de phishing que suplanta a Microsoft Office 365.', recomendacion: '1. **Alertar a los usuarios:** Envíe un comunicado a todo el personal para no abrir correos de remitentes desconocidos y no hacer clic en enlaces sospechosos. \n 2. **Eliminar el correo:** Si es posible, pida al usuario del equipo 192.168.1.50 que elimine el correo sin abrirlo. \n 3. **Bloquear remitente:** Bloquee la IP de origen en su servidor de correo o firewall si es posible.' },
-        ];
-        
-        const Card = ({ children, className = '' }) => <div className={`bg-gray-800 rounded-lg shadow p-6 ${className}`}>{children}</div>;
-        const Button = ({ children, onClick, className = '', type = 'button' }) => <button type={type} onClick={onClick} className={`px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors duration-300 ${className}`}>{children}</button>;
-        const Input = ({ id, type, value, onChange, placeholder, required = true }) => <input id={id} name={id} type={type} value={value} onChange={onChange} placeholder={placeholder} required={required} className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />;
-        const Label = ({ htmlFor, children }) => <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-300">{children}</label>;
+  <!-- Servicios -->
+  <script type="text/babel" data-presets="react,env" src="./src/services/api.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/services/alertsService.js"></script>
 
-        function LoginPage({ onLogin }) {
-             const [email, setEmail] = useState('admin@colegio.edu.pe');
-            const [password, setPassword] = useState('admin123');
-            const [error, setError] = useState('');
+  <!-- Contextos y hooks -->
+  <script type="text/babel" data-presets="react,env" src="./src/context/AuthContext.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/context/AlertsContext.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/hooks/useAuth.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/hooks/useAlerts.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/hooks/useInterval.js"></script>
 
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (email === 'admin@colegio.edu.pe' && password === 'admin123') {
-                    onLogin();
-                } else {
-                    setError('Usuario o contraseña incorrectos.');
-                }
-            };
+  <!-- Componentes -->
+  <script type="text/babel" data-presets="react,env" src="./src/components/common/Card.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/components/common/Button.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/components/common/Input.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/components/common/Label.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/components/metrics/CardMetric.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/components/alerts/AlertDetailModal.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/components/layout/Sidebar.jsx"></script>
 
-            return (
-                <div className="flex items-center justify-center min-h-screen bg-gray-900">
-                    <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-lg shadow-lg modal-fade-in">
-                        <div className="text-center">
-                            <ShieldIcon className="w-16 h-16 mx-auto text-blue-500" />
-                            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">Sistema de Detección de Intrusiones</h1>
-                            <p className="mt-2 text-gray-400">Panel de Seguridad para Redes Educativas</p>
-                        </div>
-                        <form className="space-y-6" onSubmit={handleSubmit}>
-                            <div>
-                                <Label htmlFor="email">Correo Electrónico</Label>
-                                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-                            </div>
-                            <div>
-                                <Label htmlFor="password">Contraseña</Label>
-                                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-                            </div>
-                            {error && <p className="text-sm text-red-400">{error}</p>}
-                            <div>
-                                <Button type="submit" className="w-full">Ingresar</Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            );
-        }
-        
-        function Sidebar({ page, setPage, onLogout }) {
-             const navItems = [
-                { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
-                { id: 'alertas', label: 'Alertas', icon: BellIcon },
-                { id: 'reportes', label: 'Reportes', icon: FileTextIcon },
-                { id: 'configuracion', label: 'Configuración', icon: SettingsIcon },
-                { id: 'ayuda', label: 'Ayuda', icon: HelpCircleIcon },
-            ];
-            
-            return (
-                <div className="flex flex-col w-64 bg-gray-900 text-gray-300">
-                    <div className="flex items-center justify-center h-20 border-b border-gray-800">
-                        <ShieldIcon className="w-8 h-8 text-blue-500" />
-                        <span className="ml-3 text-xl font-bold text-white">IDS Educativo</span>
-                    </div>
-                    <nav className="flex-1 px-4 py-6 space-y-2">
-                        {navItems.map(item => (
-                            <a key={item.id} href="#" onClick={() => setPage(item.id)} className={`flex items-center px-4 py-2.5 rounded-lg transition-colors duration-200 ${page === item.id ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}>
-                                <item.icon className="w-5 h-5" />
-                                <span className="ml-4 font-medium">{item.label}</span>
-                            </a>
-                        ))}
-                    </nav>
-                    <div className="px-4 py-6 border-t border-gray-800">
-                         <a href="#" onClick={onLogout} className="flex items-center px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors duration-200">
-                            <LogOutIcon className="w-5 h-5" />
-                            <span className="ml-4 font-medium">Cerrar Sesión</span>
-                        </a>
-                    </div>
-                </div>
-            );
-        }
+  <!-- Rutas -->
+  <script type="text/babel" data-presets="react,env" src="./src/routes/navigation.js"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/routes/AppRoutes.jsx"></script>
 
-        function DashboardPage() {
-            const alertsToday = mockAlerts.filter(a => dayjs(a.timestamp).isSame(dayjs(), 'day')).length;
-            const healthStatus = useMemo(() => {
-                const hasHigh = mockAlerts.some(a => a.criticidad === 'Alta' && dayjs(a.timestamp).isAfter(dayjs().subtract(1, 'hour')));
-                const hasMedium = mockAlerts.some(a => a.criticidad === 'Media' && dayjs(a.timestamp).isAfter(dayjs().subtract(1, 'hour')));
-                if (hasHigh) return { text: 'Alerta Crítica', color: 'bg-red-500', icon: XCircleIcon };
-                if (hasMedium) return { text: 'Actividad Sospechosa', color: 'bg-yellow-500', icon: AlertTriangleIcon };
-                return { text: 'Red Segura', color: 'bg-green-500', icon: CheckCircleIcon };
-            }, []);
-            const [lastActivity, setLastActivity] = useState(dayjs());
-            useEffect(() => {
-                const interval = setInterval(() => setLastActivity(dayjs()), 30 * 1000);
-                return () => clearInterval(interval);
-            }, []);
-            const alertTypesData = useMemo(() => {
-                const counts = mockAlerts.reduce((acc, alert) => { acc[alert.tipo] = (acc[alert.tipo] || 0) + 1; return acc; }, {});
-                const values = Object.values(counts);
-                const max = values.length ? Math.max(...values) : 0;
-                return { counts, max };
-            }, []);
-            const trendData = useMemo(() => ([
-                { periodo: 'Hace 4d', total: 5 },
-                { periodo: 'Hace 3d', total: 8 },
-                { periodo: 'Hace 2d', total: 4 },
-                { periodo: 'Ayer', total: 10 },
-                { periodo: 'Hoy', total: alertsToday },
-            ]), [alertsToday]);
+  <!-- Páginas -->
+  <script type="text/babel" data-presets="react,env" src="./src/pages/LoginPage.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/pages/DashboardPage.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/pages/AlertsPage.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/pages/ReportsPage.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/pages/SettingsPage.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/pages/HelpPage.jsx"></script>
 
-            const ServerStatusIndicator = ({ title, value, limit }) => {
-                const percentage = (value / limit) * 100;
-                let colorClass = 'bg-green-500';
-                if (percentage > 90) colorClass = 'bg-red-500';
-                else if (percentage > 70) colorClass = 'bg-yellow-500';
-                return (
-                    <Card>
-                        <p className="text-sm font-medium text-gray-400">{title}</p>
-                        <p className="text-2xl font-bold text-white mt-1">{value}{title.includes('Uso') ? '%' : ' GB'}</p>
-                        <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-                           <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${percentage}%` }}></div>
-                        </div>
-                    </Card>
-                );
-            };
-
-            return (
-                <div className="p-8 space-y-8">
-                    <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                        <div className={`p-6 rounded-lg flex items-center justify-between text-white ${healthStatus.color}`}>
-                            <div>
-                                <p className="text-sm font-medium opacity-80">Estado de la Red</p>
-                                <p className="text-2xl font-bold">{healthStatus.text}</p>
-                            </div>
-                            <healthStatus.icon className="w-10 h-10 opacity-70" />
-                        </div>
-                        <Card>
-                            <p className="text-sm font-medium text-gray-400">Alertas Hoy</p>
-                            <p className="text-3xl font-bold text-white">{alertsToday}</p>
-                        </Card>
-                         <Card className="col-span-1 md:col-span-2">
-                            <p className="text-sm font-medium text-gray-400">Última actividad analizada</p>
-                            <p className="text-2xl font-bold text-white">{lastActivity.format('h:mm:ss A')}</p>
-                            <p className="text-xs text-green-400">Sistema de Detección Activo</p>
-                        </Card>
-                    </div>
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-                        <ServerStatusIndicator title="Uso de CPU" value={35} limit={100} />
-                        <ServerStatusIndicator title="Uso de Memoria" value={75} limit={100} />
-                        <ServerStatusIndicator title="Espacio en Disco" value={150} limit={250} />
-                        <Card>
-                           <p className="text-sm font-medium text-gray-400">Versión del Sistema</p>
-                           <p className="text-3xl font-bold text-white">1.0.0-MVP</p>
-                        </Card>
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card>
-                            <h2 className="text-lg font-semibold text-white mb-4">Resumen de Amenazas (Últimos 7 días)</h2>
-                            <div className="space-y-3">
-                                {Object.entries(alertTypesData.counts).map(([tipo, total]) => {
-                                    const percentage = alertTypesData.max ? Math.round((total / alertTypesData.max) * 100) : 0;
-                                    return (
-                                        <div key={tipo} className="space-y-1">
-                                            <div className="flex justify-between text-sm text-gray-300">
-                                                <span>{tipo}</span>
-                                                <span className="font-semibold text-white">{total}</span>
-                                            </div>
-                                            <div className="w-full bg-gray-700/60 rounded-full h-2">
-                                                <div className="h-2 rounded-full bg-blue-500" style={{ width: `${percentage}%` }}></div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {!Object.keys(alertTypesData.counts).length && (
-                                    <p className="text-gray-400 text-sm">No se registraron alertas en este periodo.</p>
-                                )}
-                            </div>
-                        </Card>
-                        <Card>
-                            <h2 className="text-lg font-semibold text-white mb-4">Tendencia de Alertas (Últimos 5 días)</h2>
-                            <ul className="space-y-3">
-                                {trendData.map(item => (
-                                    <li key={item.periodo} className="flex items-center justify-between bg-gray-900/40 rounded-lg px-4 py-3 border border-gray-800/60">
-                                        <div>
-                                            <p className="text-sm text-gray-400 uppercase tracking-wide">{item.periodo}</p>
-                                            <p className="text-lg font-semibold text-white">{item.total} alertas</p>
-                                        </div>
-                                        <div className="flex items-center space-x-2 text-sm text-gray-300">
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${item.total >= alertsToday ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>
-                                                {item.total >= alertsToday ? '↑' : '↓'} tendencia
-                                            </span>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        </Card>
-                    </div>
-                </div>
-            );
-        }
-        
-        function AlertasPage({ onSelectAlert }) {
-             const getCriticidadClass = (criticidad) => {
-                switch (criticidad) {
-                    case 'Alta': return 'bg-red-500/20 text-red-400';
-                    case 'Media': return 'bg-yellow-500/20 text-yellow-400';
-                    case 'Baja': return 'bg-green-500/20 text-green-400';
-                    default: return 'bg-gray-500/20 text-gray-400';
-                }
-            };
-
-            return (
-                 <div className="p-8">
-                    <h1 className="text-3xl font-bold text-white mb-6">Historial de Alertas</h1>
-                    <div className="bg-gray-800 rounded-lg shadow overflow-hidden">
-                        <table className="w-full text-left text-sm text-gray-300">
-                            <thead className="bg-gray-900/50 text-xs text-gray-400 uppercase tracking-wider">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Criticidad</th>
-                                    <th scope="col" className="px-6 py-3">Fecha y Hora</th>
-                                    <th scope="col" className="px-6 py-3">Tipo de Amenaza</th>
-                                    <th scope="col" className="px-6 py-3">IP de Origen</th>
-                                    <th scope="col" className="px-6 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {mockAlerts.map(alert => (
-                                    <tr key={alert.id} className="border-b border-gray-700 hover:bg-gray-700/50">
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getCriticidadClass(alert.criticidad)}`}>
-                                                {alert.criticidad}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">{dayjs(alert.timestamp).format('DD/MM/YYYY h:mm A')} ({dayjs(alert.timestamp).fromNow()})</td>
-                                        <td className="px-6 py-4 font-medium">{alert.tipo}</td>
-                                        <td className="px-6 py-4 font-mono">{alert.ipOrigen}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button onClick={() => onSelectAlert(alert)} className="text-blue-400 hover:text-blue-300 font-semibold">Ver Detalles</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
-        }
-
-        function AlertDetailModal({ alert, onClose }) {
-            if (!alert) return null;
-             const getCriticidadClass = (criticidad) => {
-                switch (criticidad) {
-                    case 'Alta': return 'border-red-500 text-red-400';
-                    case 'Media': return 'border-yellow-500 text-yellow-400';
-                    case 'Baja': return 'border-green-500 text-green-400';
-                    default: return 'border-gray-500 text-gray-400';
-                }
-            };
-            
-            return (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
-                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border-t-4 modal-fade-in" onClick={e => e.stopPropagation()}
-                      style={{ borderColor: alert.criticidad === 'Alta' ? '#ef4444' : alert.criticidad === 'Media' ? '#f59e0b' : '#22c55e' }}>
-                        <div className="p-6">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <span className={`px-3 py-1 text-sm font-bold rounded-full ${getCriticidadClass(alert.criticidad).replace('border-','bg-').replace('/20','')}`}>
-                                        {alert.criticidad}
-                                    </span>
-                                    <h2 className="text-2xl font-bold text-white mt-3">{alert.tipo}</h2>
-                                    <p className="text-sm text-gray-400 mt-1">{dayjs(alert.timestamp).format('dddd, D [de] MMMM [de] YYYY, h:mm A')}</p>
-                                </div>
-                                <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
-                                    <XCircleIcon className="w-8 h-8"/>
-                                </button>
-                            </div>
-                            
-                            <div className="mt-6 space-y-6">
-                                <div className="bg-gray-900/50 p-4 rounded-lg">
-                                    <h3 className="font-semibold text-white mb-2">Resumen del Incidente</h3>
-                                    <p className="text-gray-300 text-sm">{alert.detalles}</p>
-                                </div>
-                                
-                                <div className="bg-green-900/30 border border-green-500/50 p-4 rounded-lg">
-                                    <h3 className="font-semibold text-green-300 mb-2">QUÉ HACER AHORA (Pasos Recomendados)</h3>
-                                    <div className="text-green-200 text-sm space-y-2 whitespace-pre-line">{alert.recomendacion}</div>
-                                </div>
-                                
-                                <details className="bg-gray-900/50 p-4 rounded-lg cursor-pointer">
-                                    <summary className="font-semibold text-white text-sm">Ver Detalles Técnicos</summary>
-                                    <div className="mt-4 text-xs text-gray-400 font-mono grid grid-cols-2 gap-x-4 gap-y-2">
-                                        <p><strong>IP Origen:</strong> {alert.ipOrigen}</p>
-                                        <p><strong>IP Destino:</strong> {alert.ipDestino}</p>
-                                        <p><strong>Puerto Destino:</strong> {alert.puertoDestino}</p>
-                                        <p><strong>Protocolo:</strong> {alert.protocolo}</p>
-                                    </div>
-                                </details>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-        
-        function ReportsPage() {
-            const [reportVisible, setReportVisible] = useState(false);
-
-            const alertTypesData = useMemo(() => {
-                const counts = mockAlerts.reduce((acc, alert) => { acc[alert.criticidad] = (acc[alert.criticidad] || 0) + 1; return acc; }, {});
-                const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
-                return { counts, total };
-            }, []);
-            const topThreats = useMemo(() => {
-                const threats = mockAlerts.reduce((acc, alert) => {
-                    if (!acc[alert.tipo]) {
-                        acc[alert.tipo] = { tipo: alert.tipo, total: 0, ultima: alert.timestamp };
-                    }
-                    acc[alert.tipo].total += 1;
-                    acc[alert.tipo].ultima = dayjs(alert.timestamp).isAfter(acc[alert.tipo].ultima) ? alert.timestamp : acc[alert.tipo].ultima;
-                    return acc;
-                }, {});
-                return Object.values(threats)
-                    .sort((a, b) => b.total - a.total)
-                    .slice(0, 5);
-            }, []);
-
-            return (
-                <div className="p-8 text-white">
-                    <h1 className="text-3xl font-bold">Reportes de Seguridad</h1>
-                    <Card className="mt-6">
-                        <div className="flex items-center space-x-4">
-                            <Label htmlFor="periodo">Seleccionar Periodo:</Label>
-                            <select id="periodo" className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2">
-                                <option>Últimos 7 días</option>
-                                <option>Últimos 30 días</option>
-                            </select>
-                            <Button onClick={() => setReportVisible(true)}>Generar Reporte</Button>
-                        </div>
-                    </Card>
-                    {reportVisible && (
-                        <div className="mt-8 bg-white text-black p-8 rounded-lg shadow-2xl max-w-4xl mx-auto modal-fade-in">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Resumen de Alertas por Criticidad</h2>
-                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                <div className="space-y-4">
-                                    <div className="bg-indigo-50 rounded-lg p-4">
-                                        <p className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">Alertas Totales</p>
-                                        <p className="text-4xl font-bold text-indigo-900">{alertTypesData.total}</p>
-                                    </div>
-                                    <div className="bg-gray-100 rounded-lg p-4">
-                                        <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Distribución por Criticidad</p>
-                                        <ul className="space-y-2">
-                                            {Object.entries(alertTypesData.counts).map(([criticidad, total]) => (
-                                                <li key={criticidad} className="flex justify-between text-sm text-gray-700">
-                                                    <span>{criticidad}</span>
-                                                    <span className="font-semibold">{total}</span>
-                                                </li>
-                                            ))}
-                                            {!Object.keys(alertTypesData.counts).length && <li className="text-gray-500 text-sm">Sin alertas registradas.</li>}
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-100 rounded-lg p-4">
-                                    <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Principales Tipos de Amenaza</p>
-                                    <ul className="space-y-3">
-                                        {topThreats.map(threat => (
-                                            <li key={threat.tipo} className="border border-gray-200 rounded-lg px-3 py-2">
-                                                <p className="font-semibold text-gray-800">{threat.tipo}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {threat.total} reporte{threat.total !== 1 ? 's' : ''} · Última detección: {dayjs(threat.ultima).fromNow()}
-                                                </p>
-                                            </li>
-                                        ))}
-                                        {!topThreats.length && <li className="text-gray-500 text-sm">No hay datos suficientes para destacar amenazas.</li>}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        function SettingsPage() {
-            const [email, setEmail] = useState("encargado.ti@colegio.edu.pe");
-            const [notification, setNotification] = useState(null);
-
-            const showNotification = (message, isError = false) => {
-                setNotification({ message, isError });
-                setTimeout(() => setNotification(null), 3000);
-            };
-
-            return (
-                 <div className="p-8 text-white max-w-4xl mx-auto">
-                    <h1 className="text-3xl font-bold mb-8">Configuración</h1>
-                    {notification && (
-                        <div className={`p-4 rounded-md mb-6 text-sm ${notification.isError ? 'bg-red-500/20 text-red-300' : 'bg-green-500/20 text-green-300'}`}>
-                            {notification.message}
-                        </div>
-                    )}
-                    <div className="space-y-8">
-                        <Card>
-                            <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Seguridad de Cuenta</h2>
-                            <form className="space-y-4" onSubmit={e => { e.preventDefault(); showNotification("Contraseña actualizada con éxito."); }}>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div><Label htmlFor="currentPass">Contraseña Actual</Label><Input id="currentPass" type="password" /></div>
-                                    <div><Label htmlFor="newPass">Nueva Contraseña</Label><Input id="newPass" type="password" /></div>
-                                    <div><Label htmlFor="confirmPass">Confirmar Contraseña</Label><Input id="confirmPass" type="password" /></div>
-                                </div>
-                                <div className="text-right"><Button type="submit">Cambiar Contraseña</Button></div>
-                            </form>
-                        </Card>
-                         <Card>
-                            <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Configuración de Notificaciones</h2>
-                             <form className="space-y-4"  onSubmit={e => { e.preventDefault(); showNotification("Correo de notificación guardado."); }}>
-                                <div>
-                                    <Label htmlFor="email">Correo para Alertas Críticas</Label>
-                                    <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-                                </div>
-                                <div className="text-right"><Button type="submit">Guardar Correo</Button></div>
-                            </form>
-                        </Card>
-                         <Card>
-                            <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Mantenimiento del Sistema</h2>
-                            <div className="flex items-center space-x-4">
-                               <Button onClick={() => showNotification("Copia de seguridad generada y descargada.")}>Crear Copia de Seguridad</Button>
-                               <Button className="bg-gray-600 hover:bg-gray-500">Restaurar Copia de Seguridad</Button>
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            );
-        }
-
-        function HelpPage() {
-            const AccordionItem = ({ title, children }) => {
-                const [isOpen, setIsOpen] = useState(false);
-                return (
-                    <div className="border-b border-gray-700">
-                        <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left flex justify-between items-center py-4 px-2 hover:bg-gray-700/50">
-                            <span className="font-semibold">{title}</span>
-                            <ChevronDownIcon className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {isOpen && <div className="p-4 bg-gray-900/50 text-gray-300">{children}</div>}
-                    </div>
-                );
-            };
-
-            const glossary = {
-                "Escaneo de Puertos (Port Scan)": "Es como si alguien estuviera tocando todas las puertas y ventanas de una casa para ver cuáles están abiertas. Los atacantes hacen esto para encontrar vulnerabilidades en la red.",
-                "Malware": "Es un término general para cualquier software malicioso (virus, troyanos, spyware) diseñado para dañar o infiltrarse en un sistema sin el consentimiento del usuario.",
-                "Phishing": "Es un intento de engañar a una persona para que revele información sensible (como contraseñas o datos de tarjetas) haciéndose pasar por una entidad de confianza, generalmente a través de un correo electrónico.",
-                "Denegación de Servicio (DoS/DDoS)": "Es un ataque que busca hacer que un servicio (como la página web del colegio) no esté disponible para sus usuarios, inundándolo con una cantidad masiva de tráfico falso.",
-                "Política de Red Violada": "Ocurre cuando un usuario en la red utiliza una aplicación o servicio que está prohibido por las normas del colegio, como programas para descargar archivos (P2P), que pueden ser inseguros y consumir mucho ancho de banda."
-            };
-
-            return (
-                 <div className="p-8 text-white max-w-4xl mx-auto">
-                    <h1 className="text-3xl font-bold mb-2">Ayuda y Glosario</h1>
-                    <p className="text-gray-400 mb-8">Encuentre respuestas a preguntas frecuentes y aprenda sobre los tipos de amenazas.</p>
-
-                    <Card>
-                        <h2 className="text-xl font-semibold mb-4">Glosario de Amenazas</h2>
-                        <div className="space-y-2">
-                           {Object.entries(glossary).map(([term, definition]) => (
-                                <AccordionItem key={term} title={term}>
-                                    <p>{definition}</p>
-                                </AccordionItem>
-                           ))}
-                        </div>
-                    </Card>
-
-                     <Card className="mt-8">
-                        <h2 className="text-xl font-semibold mb-4">Preguntas Frecuentes</h2>
-                        <div className="space-y-2">
-                           <AccordionItem title="¿Qué hago si veo una alerta 'Crítica'?">
-                                <p>1. Mantén la calma. El sistema ya ha detectado el problema.<br/>2. Ve a la pantalla de 'Alertas' y haz clic en la alerta para ver los detalles.<br/>3. Sigue los 'Pasos Recomendados'. La acción más común es identificar el equipo afectado por su IP y desconectarlo de la red.</p>
-                           </AccordionItem>
-                           <AccordionItem title="¿Cómo sé que el sistema está funcionando?">
-                                <p>En el 'Dashboard', asegúrate de que el indicador de estado diga "Red Segura" o "Actividad Sospechosa". También puedes ver la hora de la "Última actividad analizada", que debe ser reciente.</p>
-                           </AccordionItem>
-                        </div>
-                    </Card>
-                </div>
-            );
-        }
-
-        function App() {
-            const [isAuthenticated, setIsAuthenticated] = useState(false);
-            const [page, setPage] = useState('dashboard');
-            const [selectedAlert, setSelectedAlert] = useState(null);
-
-            const handleLogin = () => setIsAuthenticated(true);
-            const handleLogout = () => setIsAuthenticated(false);
-            
-            if (!isAuthenticated) return <LoginPage onLogin={handleLogin} />;
-
-            const renderPage = () => {
-                switch (page) {
-                    case 'dashboard': return <DashboardPage />;
-                    case 'alertas': return <AlertasPage onSelectAlert={setSelectedAlert} />;
-                    case 'reportes': return <ReportsPage />;
-                    case 'configuracion': return <SettingsPage />;
-                    case 'ayuda': return <HelpPage />;
-                    default: return <DashboardPage />;
-                }
-            };
-
-            return (
-                <div className="flex h-screen bg-gray-900">
-                    <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
-                    <main className="flex-1 overflow-y-auto bg-gray-800/50">
-                        {renderPage()}
-                    </main>
-                    {selectedAlert && <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />}
-                </div>
-            );
-        }
-        
-        // Final Fix: Use window.onload to ensure all external scripts are fully loaded
-        // before attempting to render the React application. This is the most robust method
-        // to prevent race conditions.
-        window.onload = () => {
-            const container = document.getElementById('root');
-            const root = ReactDOM.createRoot(container);
-            root.render(<App />);
-        }
-    </script>
+  <!-- App -->
+  <script type="text/babel" data-presets="react,env" src="./src/App.jsx"></script>
+  <script type="text/babel" data-presets="react,env" src="./src/main.jsx"></script>
 </body>
 </html>
