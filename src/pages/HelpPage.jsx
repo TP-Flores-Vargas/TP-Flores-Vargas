@@ -22,7 +22,7 @@
   };
 
   const HelpPage = () => (
-    <div className="p-8 text-white max-w-4xl mx-auto">
+    <div className="p-6 text-white max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">Ayuda y Glosario</h1>
       <p className="text-gray-400 mb-8">
         Encuentre respuestas a preguntas frecuentes y aprenda sobre los tipos de amenazas.
