@@ -1,13 +1,17 @@
 (function () {
   const api = (window.Services && window.Services.api) || {};
 
+  const sortAlertsByTimestamp = (alerts) =>
+    [...alerts].sort((a, b) => dayjs(b.timestamp).valueOf() - dayjs(a.timestamp).valueOf());
+
   const alertsService = {
     async fetchAlerts() {
-      return api.getMockAlerts();
+      const alerts = await api.getMockAlerts();
+      return sortAlertsByTimestamp(alerts);
     },
     async fetchAlertById(id) {
       const alerts = await api.getMockAlerts();
-      return alerts.find((alert) => alert.id === id) || null;
+      return sortAlertsByTimestamp(alerts).find((alert) => alert.id === id) || null;
     },
     async fetchSummary() {
       const alerts = await api.getMockAlerts();

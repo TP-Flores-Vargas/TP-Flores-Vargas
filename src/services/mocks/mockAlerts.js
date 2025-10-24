@@ -60,5 +60,65 @@
  2. **Eliminar el correo:** Si es posible, pida al usuario del equipo 192.168.1.50 que elimine el correo sin abrirlo.
  3. **Bloquear remitente:** Bloquee la IP de origen en su servidor de correo o firewall si es posible.`,
     },
+    {
+      id: 5,
+      timestamp: '2025-10-07T09:40:00',
+      criticidad: 'Media',
+      tipo: 'Intrusión SSH',
+      ipOrigen: '38.21.150.23',
+      ipDestino: '192.168.1.30',
+      puertoDestino: 22,
+      protocolo: 'TCP',
+      detalles:
+        'Se registraron múltiples intentos fallidos de autenticación mediante SSH hacia el servidor académico. Los intentos se originaron desde una dirección IP extranjera.',
+      recomendacion: `1. **Bloquear la IP 38.21.150.23:** Aplique una regla temporal en el firewall para detener nuevos intentos.
+ 2. **Habilitar autenticación multifactor:** Si es posible, agregue MFA para los accesos administrativos.
+ 3. **Verificar credenciales:** Cambie las contraseñas de las cuentas administrativas si es que pudieron haber sido expuestas.`,
+    },
+    {
+      id: 6,
+      timestamp: '2025-10-06T15:05:00',
+      criticidad: 'Baja',
+      tipo: 'Uso Anómalo de Ancho de Banda',
+      ipOrigen: '192.168.1.180',
+      ipDestino: 'N/A',
+      puertoDestino: 'N/A',
+      protocolo: 'HTTP',
+      detalles:
+        'El equipo del laboratorio 12 presenta un consumo de ancho de banda 5 veces superior al promedio habitual. Se observó streaming de video en resolución 4K durante horario de clases.',
+      recomendacion: `1. **Contactar al docente encargado:** Verifique si el uso corresponde a una clase autorizada.
+ 2. **Aplicar políticas de calidad de servicio (QoS):** Limite el ancho de banda para actividades no prioritarias en horario escolar.
+ 3. **Registrar el evento:** Documente la actividad para evaluar ajustes en las políticas de uso aceptable.`,
+    },
+    {
+      id: 7,
+      timestamp: '2025-10-05T22:18:00',
+      criticidad: 'Alta',
+      tipo: 'Ataque DDoS Mitigado',
+      ipOrigen: 'Varias fuentes',
+      ipDestino: '179.6.25.10',
+      puertoDestino: 443,
+      protocolo: 'TCP',
+      detalles:
+        'El proveedor de internet reportó y mitigó un pico de tráfico anómalo dirigido a la página web institucional. Se identificaron más de 15.000 solicitudes por segundo durante 3 minutos.',
+      recomendacion: `1. **Coordinar con el proveedor:** Solicite el reporte detallado del incidente y confirme que las medidas de mitigación sigan activas.
+ 2. **Comunicar al personal directivo:** Informe brevemente del evento y las acciones tomadas.
+ 3. **Monitorear la disponibilidad:** Revise el tiempo de respuesta del portal institucional durante las próximas horas.`,
+    },
+    {
+      id: 8,
+      timestamp: '2025-09-30T12:30:00',
+      criticidad: 'Media',
+      tipo: 'USB No Autorizado',
+      ipOrigen: 'Equipo Biblioteca 03',
+      ipDestino: 'N/A',
+      puertoDestino: 'N/A',
+      protocolo: 'USB',
+      detalles:
+        'Se detectó la conexión de un dispositivo USB no registrado en un equipo público. El dispositivo contenía archivos ejecutables desconocidos.',
+      recomendacion: `1. **Retirar el dispositivo:** Solicite al usuario desconectar el USB inmediatamente.
+ 2. **Analizar el contenido:** Revise el dispositivo con un antivirus actualizado antes de volver a conectarlo.
+ 3. **Actualizar la política de uso:** Refuerce la comunicación sobre el uso de dispositivos externos en equipos del colegio.`,
+    },
   ];
 })();
