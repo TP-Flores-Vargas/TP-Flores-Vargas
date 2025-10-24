@@ -77,7 +77,7 @@
               <Button onClick={() => showNotification('Copia de seguridad generada y descargada.')}>
                 Crear Copia de Seguridad
               </Button>
-              <Button className="bg-gray-600 hover:bg-gray-500">Restaurar Copia de Seguridad</Button>
+              <Button variant="secondary">Restaurar Copia de Seguridad</Button>
             </div>
           </Card>
         </div>
