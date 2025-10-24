@@ -54,7 +54,7 @@
             </div>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" size="lg">
                 Ingresar
               </Button>
             </div>

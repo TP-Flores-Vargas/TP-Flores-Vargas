@@ -3,11 +3,12 @@
   const { severityTheme } = window.Utils || {};
   const { formatDate } = window.Utils || {};
 
-  const AlertsPage = ({ onSelectAlert }) => {
+  const AlertsPage = ({ onSelectAlert, onNavigate }) => {
     const { alerts, setSelectedAlert } = useAlerts();
     const handleSelect = (alert) => {
       setSelectedAlert(alert);
       onSelectAlert?.(alert);
+      onNavigate?.('detalles-alerta');
     };
 
     return (

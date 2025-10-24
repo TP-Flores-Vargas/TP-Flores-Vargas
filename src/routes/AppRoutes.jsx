@@ -1,11 +1,23 @@
 (function () {
   const AppRoutes = (page) => {
-    const { DashboardPage, AlertsPage, ReportsPage, SettingsPage, HelpPage } = window.Pages || {};
+    const {
+      HomePage,
+      DashboardPage,
+      AlertsPage,
+      AlertDetailsPage,
+      ReportsPage,
+      SettingsPage,
+      HelpPage,
+    } = window.Pages || {};
     switch (page) {
+      case 'inicio':
+        return HomePage;
       case 'dashboard':
         return DashboardPage;
       case 'alertas':
         return AlertsPage;
+      case 'detalles-alerta':
+        return AlertDetailsPage;
       case 'reportes':
         return ReportsPage;
       case 'configuracion':
@@ -13,7 +25,7 @@
       case 'ayuda':
         return HelpPage;
       default:
-        return DashboardPage;
+        return HomePage;
     }
   };
 

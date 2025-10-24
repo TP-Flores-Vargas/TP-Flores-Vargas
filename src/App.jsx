@@ -1,7 +1,8 @@
 (function () {
-  const { useState } = React;
+  const { useMemo, useState } = React;
 
   const Sidebar = window.Components?.Layout?.Sidebar;
+  const PageHeader = window.Components?.Layout?.PageHeader;
   const AlertDetailModal = window.Components?.Alerts?.AlertDetailModal;
   const { AuthProvider, AlertsProvider } = window.Context || {};
   const { useAuth, useAlerts } = window.Hooks || {};
@@ -11,27 +12,62 @@
   const AppShell = () => {
     const { isAuthenticated, login, logout } = useAuth();
     const { selectedAlert, setSelectedAlert } = useAlerts();
-    const [page, setPage] = useState('dashboard');
+    const [page, setPage] = useState('inicio');
 
     if (!isAuthenticated) {
       return <LoginPage onLogin={login} />;
     }
 
-    const CurrentPage = AppRoutes?.(page);
+    const CurrentPage = useMemo(() => AppRoutes?.(page), [AppRoutes, page]);
+    const pageMeta = useMemo(() => {
+      const meta = window.Routes?.pageMeta?.[page];
+      if (!meta) {
+        return {
+          title: 'IDS Educativo',
+          description: 'Monitorea y gestiona la seguridad de la red académica en un solo lugar.',
+          actions: [],
+        };
+      }
+      return meta;
+    }, [page]);
+
+    const handleNavigate = (nextPage) => {
+      if (!nextPage) return;
+      setPage(nextPage);
+    };
 
     const handleLogout = () => {
       logout();
-      setPage('dashboard');
+      setPage('inicio');
       setSelectedAlert(null);
+    };
+
+    const handleSelectAlert = (alert) => {
+      setSelectedAlert(alert);
     };
 
     return (
       <div className="flex h-screen bg-gray-900">
         <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
         <main className="flex-1 overflow-y-auto bg-gray-800/50">
-          {CurrentPage ? <CurrentPage onSelectAlert={setSelectedAlert} /> : null}
+          {PageHeader && (
+            <PageHeader
+              title={pageMeta.title}
+              description={pageMeta.description}
+              actions={pageMeta.actions}
+              onNavigate={handleNavigate}
+            />
+          )}
+          {CurrentPage ? (
+            <CurrentPage
+              onSelectAlert={handleSelectAlert}
+              onNavigate={handleNavigate}
+              currentPage={page}
+              pageMeta={pageMeta}
+            />
+          ) : null}
         </main>
-        {selectedAlert && (
+        {page !== 'detalles-alerta' && selectedAlert && (
           <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
         )}
       </div>

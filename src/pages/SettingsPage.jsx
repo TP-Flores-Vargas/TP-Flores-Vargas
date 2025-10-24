@@ -49,7 +49,9 @@
                 </div>
               </div>
               <div className="text-right">
-                <Button type="submit">Cambiar Contraseña</Button>
+                <Button type="submit" size="sm">
+                  Cambiar Contraseña
+                </Button>
               </div>
             </form>
           </Card>
@@ -67,17 +69,21 @@
                 <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </div>
               <div className="text-right">
-                <Button type="submit">Guardar Correo</Button>
+                <Button type="submit" size="sm">
+                  Guardar Correo
+                </Button>
               </div>
             </form>
           </Card>
           <Card>
             <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Mantenimiento del Sistema</h2>
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
-              <Button onClick={() => showNotification('Copia de seguridad generada y descargada.')}>
+              <Button onClick={() => showNotification('Copia de seguridad generada y descargada.')} size="sm">
                 Crear Copia de Seguridad
               </Button>
-              <Button className="bg-gray-600 hover:bg-gray-500">Restaurar Copia de Seguridad</Button>
+              <Button variant="ghost" size="sm">
+                Restaurar Copia de Seguridad
+              </Button>
             </div>
           </Card>
         </div>
