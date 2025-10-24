@@ -36,5 +36,7 @@
   window.Context = window.Context || {};
   window.Context.AlertsContext = AlertsContext;
   window.Context.AlertsProvider = AlertsProvider;
+  window.Context.Providers = window.Context.Providers || {};
+  window.Context.Providers.AlertsProvider = AlertsProvider;
 })();
 

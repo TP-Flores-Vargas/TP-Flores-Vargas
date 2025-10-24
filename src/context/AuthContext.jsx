@@ -21,5 +21,7 @@
   window.Context = window.Context || {};
   window.Context.AuthContext = AuthContext;
   window.Context.AuthProvider = AuthProvider;
+  window.Context.Providers = window.Context.Providers || {};
+  window.Context.Providers.AuthProvider = AuthProvider;
 })();
 
