@@ -1,16 +1,23 @@
 (function () {
   const api = (window.Services && window.Services.api) || {};
 
+  const loadMockAlerts = async () => {
+    if (typeof api.getMockAlerts === 'function') {
+      return api.getMockAlerts();
+    }
+    return Promise.resolve(window.mockAlerts || []);
+  };
+
   const alertsService = {
     async fetchAlerts() {
-      return api.getMockAlerts();
+      return loadMockAlerts();
     },
     async fetchAlertById(id) {
-      const alerts = await api.getMockAlerts();
+      const alerts = await loadMockAlerts();
       return alerts.find((alert) => alert.id === id) || null;
     },
     async fetchSummary() {
-      const alerts = await api.getMockAlerts();
+      const alerts = await loadMockAlerts();
       const totals = alerts.reduce(
         (acc, alert) => {
           acc.total += 1;

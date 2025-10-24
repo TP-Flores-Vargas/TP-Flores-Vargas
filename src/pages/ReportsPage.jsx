@@ -46,7 +46,9 @@
               <option value="7">Últimos 7 días</option>
               <option value="30">Últimos 30 días</option>
             </select>
-            <Button onClick={() => setReportVisible(true)}>Generar Reporte</Button>
+            <Button onClick={() => setReportVisible(true)} size="sm">
+              Generar Reporte
+            </Button>
           </div>
         </Card>
         {reportVisible && (

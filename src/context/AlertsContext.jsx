@@ -9,10 +9,22 @@
     useEffect(() => {
       let isMounted = true;
       const loadAlerts = async () => {
-        const service = window.Services?.alertsService;
-        if (!service) return;
-        const data = await service.fetchAlerts();
-        if (isMounted) setAlerts(data);
+        try {
+          const service = window.Services?.alertsService;
+          if (!service || typeof service.fetchAlerts !== 'function') {
+            if (isMounted) {
+              setAlerts(window.mockAlerts || []);
+            }
+            return;
+          }
+          const data = await service.fetchAlerts();
+          if (isMounted) setAlerts(Array.isArray(data) ? data : window.mockAlerts || []);
+        } catch (error) {
+          console.error('No fue posible cargar las alertas:', error);
+          if (isMounted) {
+            setAlerts(window.mockAlerts || []);
+          }
+        }
       };
       loadAlerts();
       return () => {
