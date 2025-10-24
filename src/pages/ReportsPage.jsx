@@ -5,19 +5,20 @@
 
   const ReportsPage = () => {
     const [reportVisible, setReportVisible] = useState(false);
-    const { alerts } = useAlerts();
+    const { alerts, lastUpdated } = useAlerts();
+    const dataset = Array.isArray(alerts) ? alerts : [];
 
     const alertTypesData = useMemo(() => {
-      const counts = alerts.reduce((acc, alert) => {
+      const counts = dataset.reduce((acc, alert) => {
         acc[alert.criticidad] = (acc[alert.criticidad] || 0) + 1;
         return acc;
       }, {});
       const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
       return { counts, total };
-    }, [alerts]);
+    }, [dataset]);
 
     const topThreats = useMemo(() => {
-      const threats = alerts.reduce((acc, alert) => {
+      const threats = dataset.reduce((acc, alert) => {
         if (!acc[alert.tipo]) {
           acc[alert.tipo] = { tipo: alert.tipo, total: 0, ultima: alert.timestamp };
         }
@@ -30,10 +31,10 @@
       return Object.values(threats)
         .sort((a, b) => b.total - a.total)
         .slice(0, 5);
-    }, [alerts]);
+    }, [dataset]);
 
     return (
-      <div className="p-8 text-white">
+      <div className="p-6 text-white">
         <h1 className="text-3xl font-bold">Reportes de Seguridad</h1>
         <Card className="mt-6">
           <div className="flex items-center space-x-4">
@@ -52,6 +53,9 @@
         {reportVisible && (
           <div className="mt-8 bg-white text-black p-8 rounded-lg shadow-2xl max-w-4xl mx-auto modal-fade-in">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Resumen de Alertas por Criticidad</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Datos actualizados {lastUpdated ? dayjs(lastUpdated).fromNow() : 'recientemente'}.
+            </p>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="space-y-4">
                 <div className="bg-indigo-50 rounded-lg p-4">
