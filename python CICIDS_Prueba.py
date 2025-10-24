@@ -10,7 +10,7 @@ from sklearn.metrics import classification_report
 # =============================
 # 1) Definir rutas
 # =============================
-DATA_DIR = Path("datasets")  # Carpeta donde están los CSV
+DATA_DIR = Path(__file__).resolve().parent / "datasets"  # Carpeta donde están los CSV
 FILES = [
     "Monday-WorkingHours.pcap_ISCX.csv",
     "Tuesday-WorkingHours.pcap_ISCX.csv",
@@ -25,6 +25,21 @@ FILES = [
 # =============================
 # 2) Convertir CSV → Parquet (si no existe)
 # =============================
+if not DATA_DIR.exists():
+    raise FileNotFoundError(
+        "No se encontró la carpeta de datasets. Coloca los archivos CSV dentro de "
+        f"{DATA_DIR} (puedes crearla si no existe) antes de ejecutar el script."
+    )
+
+missing_csv = [file for file in FILES if not (DATA_DIR / file).exists()]
+if missing_csv:
+    missing_list = "\n - ".join(missing_csv)
+    raise FileNotFoundError(
+        "Faltan los siguientes archivos CSV requeridos en la carpeta de datasets:" 
+        f"\n - {missing_list}\n"
+        "Descarga los ficheros del dataset CICIDS2017 y colócalos en la carpeta indicada."
+    )
+
 for file in FILES:
     csv_path = DATA_DIR / file
     parquet_path = csv_path.with_suffix(".parquet")
@@ -94,7 +109,7 @@ print("\n=== Random Forest ===")
 print(classification_report(y_test, y_pred_rf))
 
 # Logistic Regression
-lr = LogisticRegression(max_iter=1000, n_jobs=-1)
+lr = LogisticRegression(max_iter=1000)
 lr.fit(X_train_s, y_train)
 y_pred_lr = lr.predict(X_test_s)
 print("\n=== Logistic Regression ===")
