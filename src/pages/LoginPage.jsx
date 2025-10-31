@@ -1,5 +1,5 @@
 (function () {
-  const { useState } = React;
+  const { useEffect, useState } = React;
   const { Button, Input, Label } = window.Common || {};
   const { ShieldIcon } = window.Icons || {};
   const { useAuth } = window.Hooks || {};
@@ -8,14 +8,31 @@
     const auth = useAuth?.();
     const [email, setEmail] = useState('admin@colegio.edu.pe');
     const [password, setPassword] = useState('admin123');
-    const [error, setError] = useState('');
+    const [error, setError] = useState(auth?.authError || '');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (event) => {
+    useEffect(() => {
+      if (auth?.authError) {
+        setError(auth.authError);
+      }
+    }, [auth?.authError]);
+
+    const handleSubmit = async (event) => {
       event.preventDefault();
-      if (email === 'admin@colegio.edu.pe' && password === 'admin123') {
-        (auth?.login || onLogin)?.();
-      } else {
-        setError('Usuario o contraseña incorrectos.');
+      setError('');
+      const loginFn = auth?.login || onLogin;
+      if (!loginFn) return;
+
+      try {
+        setIsSubmitting(true);
+        const result = await loginFn({ email, password });
+        if (!result?.success) {
+          setError(result?.message || auth?.authError || 'No se pudo iniciar sesión.');
+        }
+      } catch (submitError) {
+        setError(submitError.message || 'No se pudo iniciar sesión.');
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
@@ -38,7 +55,11 @@
                 id="email"
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setError('');
+                  auth?.clearError?.();
+                }}
                 placeholder="admin@colegio.edu.pe"
               />
             </div>
@@ -48,14 +69,18 @@
                 id="password"
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError('');
+                  auth?.clearError?.();
+                }}
                 placeholder="********"
               />
             </div>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <div>
-              <Button type="submit" className="w-full">
-                Ingresar
+              <Button type="submit" className="w-full" disabled={isSubmitting || auth?.isProcessing}>
+                {isSubmitting || auth?.isProcessing ? 'Ingresando…' : 'Ingresar'}
               </Button>
             </div>
           </form>

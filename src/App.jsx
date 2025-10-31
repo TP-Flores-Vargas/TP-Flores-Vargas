@@ -9,9 +9,17 @@
   const AppRoutes = window.Routes?.AppRoutes;
 
   const AppShell = () => {
-    const { isAuthenticated, login, logout } = useAuth();
+    const { isAuthenticated, login, logout, isLoading: authLoading } = useAuth();
     const { selectedAlert, setSelectedAlert } = useAlerts();
     const [page, setPage] = useState('dashboard');
+
+    if (authLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white animate-pulse">
+          Verificando sesión...
+        </div>
+      );
+    }
 
     if (!isAuthenticated) {
       return <LoginPage onLogin={login} />;
