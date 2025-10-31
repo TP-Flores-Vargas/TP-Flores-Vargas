@@ -1,22 +1,16 @@
-(function () {
-  const { useEffect, useRef } = React;
+import { useEffect, useRef } from 'react';
 
-  const useInterval = (callback, delay) => {
-    const savedCallback = useRef();
+export const useInterval = (callback, delay) => {
+  const savedCallback = useRef();
 
-    useEffect(() => {
-      savedCallback.current = callback;
-    }, [callback]);
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
 
-    useEffect(() => {
-      if (typeof delay !== 'number') return;
-      const tick = () => savedCallback.current && savedCallback.current();
-      const id = setInterval(tick, delay);
-      return () => clearInterval(id);
-    }, [delay]);
-  };
-
-  window.Hooks = window.Hooks || {};
-  window.Hooks.useInterval = useInterval;
-})();
-
+  useEffect(() => {
+    if (typeof delay !== 'number') return undefined;
+    const tick = () => savedCallback.current && savedCallback.current();
+    const id = setInterval(tick, delay);
+    return () => clearInterval(id);
+  }, [delay]);
+};

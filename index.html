@@ -1,71 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es" class="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mockup | Sistema IDS Educativo</title>
-  <link rel="stylesheet" href="./src/styles/index.css" />
-</head>
-<body>
-  <div id="root">
-    <div class="flex items-center justify-center min-h-screen bg-gray-900 text-white animate-pulse">
-      Cargando aplicación...
-    </div>
-  </div>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/es.js"></script>
-
-  <!-- Datos mock y configuración -->
-  <script type="text/babel" data-presets="react,env" src="./src/services/mocks/mockAlerts.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/services/mocks/helpContent.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/config/constants.js"></script>
-
-  <!-- Utilidades y activos -->
-  <script type="text/babel" data-presets="react,env" src="./src/utils/formatDate.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/utils/formatBytes.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/utils/severityMap.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/assets/icons/index.js"></script>
-
-  <!-- Servicios -->
-  <script type="text/babel" data-presets="react,env" src="./src/services/api.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/services/alertsService.js"></script>
-
-  <!-- Contextos y hooks -->
-  <script type="text/babel" data-presets="react,env" src="./src/context/AuthContext.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/context/AlertsContext.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/hooks/useAuth.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/hooks/useAlerts.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/hooks/useInterval.js"></script>
-
-  <!-- Componentes -->
-  <script type="text/babel" data-presets="react,env" src="./src/components/common/Card.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/components/common/Button.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/components/common/Input.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/components/common/Label.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/components/metrics/CardMetric.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/components/alerts/AlertDetailModal.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/components/layout/Sidebar.jsx"></script>
-
-  <!-- Rutas -->
-  <script type="text/babel" data-presets="react,env" src="./src/routes/navigation.js"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/routes/AppRoutes.jsx"></script>
-
-  <!-- Páginas -->
-  <script type="text/babel" data-presets="react,env" src="./src/pages/LoginPage.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/pages/DashboardPage.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/pages/AlertsPage.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/pages/ReportsPage.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/pages/SettingsPage.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/pages/HelpPage.jsx"></script>
-
-  <!-- App -->
-  <script type="text/babel" data-presets="react,env" src="./src/App.jsx"></script>
-  <script type="text/babel" data-presets="react,env" src="./src/main.jsx"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup | Sistema IDS Educativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-900 text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

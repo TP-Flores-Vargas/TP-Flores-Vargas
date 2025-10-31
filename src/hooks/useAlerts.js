@@ -1,13 +1,11 @@
-(function () {
-  const { useContext } = React;
+import { useContext } from 'react';
 
-  const useAlerts = () => {
-    const context = useContext(window.Context?.AlertsContext);
-    if (!context) throw new Error('useAlerts debe usarse dentro de AlertsProvider');
-    return context;
-  };
+import { AlertsContext } from '../context/AlertsContext.jsx';
 
-  window.Hooks = window.Hooks || {};
-  window.Hooks.useAlerts = useAlerts;
-})();
-
+export const useAlerts = () => {
+  const context = useContext(AlertsContext);
+  if (!context) {
+    throw new Error('useAlerts debe usarse dentro de AlertsProvider');
+  }
+  return context;
+};

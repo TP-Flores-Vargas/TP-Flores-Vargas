@@ -1,50 +1,50 @@
-(function () {
-  const { useState } = React;
+import { useState } from 'react';
 
-  const Sidebar = window.Components?.Layout?.Sidebar;
-  const AlertDetailModal = window.Components?.Alerts?.AlertDetailModal;
-  const { AuthProvider, AlertsProvider } = window.Context || {};
-  const { useAuth, useAlerts } = window.Hooks || {};
-  const { LoginPage } = window.Pages || {};
-  const AppRoutes = window.Routes?.AppRoutes;
+import AlertDetailModal from './components/alerts/AlertDetailModal.jsx';
+import Sidebar from './components/layout/Sidebar.jsx';
+import { AuthProvider } from './context/AuthContext.jsx';
+import { AlertsProvider } from './context/AlertsContext.jsx';
+import { useAuth } from './hooks/useAuth.js';
+import { useAlerts } from './hooks/useAlerts.js';
+import LoginPage from './pages/LoginPage.jsx';
+import { getPageComponent } from './routes/AppRoutes.jsx';
 
-  const AppShell = () => {
-    const { isAuthenticated, login, logout } = useAuth();
-    const { selectedAlert, setSelectedAlert } = useAlerts();
-    const [page, setPage] = useState('dashboard');
+const AppShell = () => {
+  const { isAuthenticated, login, logout } = useAuth();
+  const { selectedAlert, setSelectedAlert } = useAlerts();
+  const [page, setPage] = useState('dashboard');
 
-    if (!isAuthenticated) {
-      return <LoginPage onLogin={login} />;
-    }
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={login} />;
+  }
 
-    const CurrentPage = AppRoutes?.(page);
+  const CurrentPage = getPageComponent(page);
 
-    const handleLogout = () => {
-      logout();
-      setPage('dashboard');
-      setSelectedAlert(null);
-    };
-
-    return (
-      <div className="flex h-screen bg-gray-900">
-        <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
-        <main className="flex-1 overflow-y-auto bg-gray-800/50">
-          {CurrentPage ? <CurrentPage onSelectAlert={setSelectedAlert} /> : null}
-        </main>
-        {selectedAlert && (
-          <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
-        )}
-      </div>
-    );
+  const handleLogout = () => {
+    logout();
+    setPage('dashboard');
+    setSelectedAlert(null);
   };
 
-  const App = () => (
-    <AuthProvider>
-      <AlertsProvider>
-        <AppShell />
-      </AlertsProvider>
-    </AuthProvider>
+  return (
+    <div className="flex h-screen bg-gray-900">
+      <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
+      <main className="flex-1 overflow-y-auto bg-gray-800/50">
+        {CurrentPage ? <CurrentPage onSelectAlert={setSelectedAlert} /> : null}
+      </main>
+      {selectedAlert && (
+        <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
+      )}
+    </div>
   );
+};
 
-  window.App = App;
-})();
+const App = () => (
+  <AuthProvider>
+    <AlertsProvider>
+      <AppShell />
+    </AlertsProvider>
+  </AuthProvider>
+);
+
+export default App;

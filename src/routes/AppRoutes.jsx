@@ -1,23 +1,15 @@
-(function () {
-  const AppRoutes = (page) => {
-    const { DashboardPage, AlertsPage, ReportsPage, SettingsPage, HelpPage } = window.Pages || {};
-    switch (page) {
-      case 'dashboard':
-        return DashboardPage;
-      case 'alertas':
-        return AlertsPage;
-      case 'reportes':
-        return ReportsPage;
-      case 'configuracion':
-        return SettingsPage;
-      case 'ayuda':
-        return HelpPage;
-      default:
-        return DashboardPage;
-    }
-  };
+import AlertsPage from '../pages/AlertsPage.jsx';
+import DashboardPage from '../pages/DashboardPage.jsx';
+import HelpPage from '../pages/HelpPage.jsx';
+import ReportsPage from '../pages/ReportsPage.jsx';
+import SettingsPage from '../pages/SettingsPage.jsx';
 
-  window.Routes = window.Routes || {};
-  window.Routes.AppRoutes = AppRoutes;
-})();
+const routes = {
+  dashboard: DashboardPage,
+  alertas: AlertsPage,
+  reportes: ReportsPage,
+  configuracion: SettingsPage,
+  ayuda: HelpPage,
+};
 
+export const getPageComponent = (page) => routes[page] || DashboardPage;

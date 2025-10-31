@@ -1,19 +1,15 @@
-(function () {
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import { faqItems, glossary } from '../data/helpContent.js';
+import { mockAlerts } from '../data/mockAlerts.js';
 
-  const api = {
-    async getMockAlerts() {
-      // Simula llamada al backend para prototipo
-      await delay(150);
-      return window.mockAlerts || [];
-    },
-    async getHelpContent() {
-      await delay(80);
-      return window.helpContent || { glossary: {}, faqItems: [] };
-    },
-  };
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  window.Services = window.Services || {};
-  window.Services.api = api;
-})();
-
+export const api = {
+  async getMockAlerts() {
+    await delay(150);
+    return mockAlerts;
+  },
+  async getHelpContent() {
+    await delay(80);
+    return { glossary, faqItems };
+  },
+};

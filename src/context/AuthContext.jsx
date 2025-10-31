@@ -1,25 +1,18 @@
-(function () {
-  const { createContext, useMemo, useState } = React;
+import { createContext, useMemo, useState } from 'react';
 
-  const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
-  const AuthProvider = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+export const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    const value = useMemo(
-      () => ({
-        isAuthenticated,
-        login: () => setIsAuthenticated(true),
-        logout: () => setIsAuthenticated(false),
-      }),
-      [isAuthenticated],
-    );
+  const value = useMemo(
+    () => ({
+      isAuthenticated,
+      login: () => setIsAuthenticated(true),
+      logout: () => setIsAuthenticated(false),
+    }),
+    [isAuthenticated],
+  );
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-  };
-
-  window.Context = window.Context || {};
-  window.Context.AuthContext = AuthContext;
-  window.Context.AuthProvider = AuthProvider;
-})();
-
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

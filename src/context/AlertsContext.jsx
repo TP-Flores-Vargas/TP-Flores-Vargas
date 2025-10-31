@@ -1,40 +1,44 @@
-(function () {
-  const { createContext, useEffect, useMemo, useState } = React;
-  const AlertsContext = createContext(null);
+import { createContext, useEffect, useMemo, useState } from 'react';
 
-  const AlertsProvider = ({ children }) => {
-    const [alerts, setAlerts] = useState(window.mockAlerts || []);
-    const [selectedAlert, setSelectedAlert] = useState(null);
+import { mockAlerts } from '../data/mockAlerts.js';
+import { alertsService } from '../services/alertsService.js';
 
-    useEffect(() => {
-      let isMounted = true;
-      const loadAlerts = async () => {
-        const service = window.Services?.alertsService;
-        if (!service) return;
-        const data = await service.fetchAlerts();
-        if (isMounted) setAlerts(data);
-      };
-      loadAlerts();
-      return () => {
-        isMounted = false;
-      };
-    }, []);
+export const AlertsContext = createContext(null);
 
-    const value = useMemo(
-      () => ({
-        alerts,
-        setAlerts,
-        selectedAlert,
-        setSelectedAlert,
-      }),
-      [alerts, selectedAlert],
-    );
+export const AlertsProvider = ({ children }) => {
+  const [alerts, setAlerts] = useState(mockAlerts);
+  const [selectedAlert, setSelectedAlert] = useState(null);
 
-    return <AlertsContext.Provider value={value}>{children}</AlertsContext.Provider>;
-  };
+  useEffect(() => {
+    let isMounted = true;
 
-  window.Context = window.Context || {};
-  window.Context.AlertsContext = AlertsContext;
-  window.Context.AlertsProvider = AlertsProvider;
-})();
+    const loadAlerts = async () => {
+      try {
+        const data = await alertsService.fetchAlerts();
+        if (isMounted) {
+          setAlerts(data);
+        }
+      } catch (error) {
+        console.error('Error al cargar alertas', error);
+      }
+    };
 
+    loadAlerts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      alerts,
+      setAlerts,
+      selectedAlert,
+      setSelectedAlert,
+    }),
+    [alerts, selectedAlert],
+  );
+
+  return <AlertsContext.Provider value={value}>{children}</AlertsContext.Provider>;
+};
