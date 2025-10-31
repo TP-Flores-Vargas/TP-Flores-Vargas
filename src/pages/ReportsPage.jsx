@@ -5,6 +5,11 @@
 
   const ReportsPage = () => {
     const [reportVisible, setReportVisible] = useState(false);
+    const [period, setPeriod] = useState('7');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [reportData, setReportData] = useState(null);
     const { alerts } = useAlerts();
 
     const alertTypesData = useMemo(() => {
@@ -32,6 +37,78 @@
         .slice(0, 5);
     }, [alerts]);
 
+    const buildLocalSummary = () => ({
+      generatedAt: new Date().toISOString(),
+      totals: {
+        total: alertTypesData.total,
+        bySeverity: alertTypesData.counts,
+        byType: Object.fromEntries(topThreats.map((item) => [item.tipo, item.total])),
+      },
+      topThreats,
+    });
+
+    const handleGenerateReport = async () => {
+      const api = window.Services?.api;
+      setIsGenerating(true);
+      setError('');
+      setSuccess('');
+      try {
+        if (api?.generateBasicReport) {
+          const response = await api.generateBasicReport(Number(period));
+          setReportData(response);
+          setReportVisible(true);
+          setSuccess('Reporte generado con éxito.');
+        } else {
+          setReportData({ summary: buildLocalSummary() });
+          setReportVisible(true);
+          setSuccess('Reporte generado usando datos locales.');
+        }
+      } catch (generateError) {
+        console.error('No se pudo generar el reporte', generateError);
+        setError(generateError.message || 'No se pudo generar el reporte.');
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    const handleDownload = () => {
+      if (!reportData?.document?.content) return;
+      try {
+        const { content, filename = 'reporte-alertas.txt', mimeType = 'text/plain' } = reportData.document;
+        const binary = atob(content);
+        const length = binary.length;
+        const bytes = new Uint8Array(length);
+        for (let index = 0; index < length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        const blob = new Blob([bytes], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      } catch (downloadError) {
+        console.error('No se pudo descargar el reporte', downloadError);
+        setError('No se pudo preparar la descarga del reporte.');
+      }
+    };
+
+    const severityDistribution = reportData?.summary?.totals?.bySeverity || alertTypesData.counts;
+    const totalAlerts = reportData?.summary?.totals?.total ?? alertTypesData.total;
+    const backendTopThreats = reportData?.summary?.topThreats;
+    const displayTopThreats = backendTopThreats?.length
+      ? backendTopThreats.map((item) => ({
+          tipo: item.tipo,
+          total: item.total,
+          ultima:
+            alerts.find((alert) => alert.tipo === item.tipo)?.timestamp ||
+            reportData.summary.generatedAt,
+        }))
+      : topThreats;
+
     return (
       <div className="p-8 text-white">
         <h1 className="text-3xl font-bold">Reportes de Seguridad</h1>
@@ -41,14 +118,19 @@
             <select
               id="periodo"
               className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2"
-              defaultValue="7"
+              value={period}
+              onChange={(event) => setPeriod(event.target.value)}
             >
               <option value="7">Últimos 7 días</option>
               <option value="30">Últimos 30 días</option>
             </select>
-            <Button onClick={() => setReportVisible(true)}>Generar Reporte</Button>
+            <Button onClick={handleGenerateReport} disabled={isGenerating}>
+              {isGenerating ? 'Generando…' : 'Generar Reporte'}
+            </Button>
           </div>
         </Card>
+        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+        {success && <p className="mt-4 text-sm text-green-400">{success}</p>}
         {reportVisible && (
           <div className="mt-8 bg-white text-black p-8 rounded-lg shadow-2xl max-w-4xl mx-auto modal-fade-in">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Resumen de Alertas por Criticidad</h2>
@@ -56,20 +138,20 @@
               <div className="space-y-4">
                 <div className="bg-indigo-50 rounded-lg p-4">
                   <p className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">Alertas Totales</p>
-                  <p className="text-4xl font-bold text-indigo-900">{alertTypesData.total}</p>
+                  <p className="text-4xl font-bold text-indigo-900">{totalAlerts}</p>
                 </div>
                 <div className="bg-gray-100 rounded-lg p-4">
                   <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
                     Distribución por Criticidad
                   </p>
                   <ul className="space-y-2">
-                    {Object.entries(alertTypesData.counts).map(([criticidad, total]) => (
+                    {Object.entries(severityDistribution).map(([criticidad, total]) => (
                       <li key={criticidad} className="flex justify-between text-sm text-gray-700">
                         <span>{criticidad}</span>
                         <span className="font-semibold">{total}</span>
                       </li>
                     ))}
-                    {!Object.keys(alertTypesData.counts).length && (
+                    {!Object.keys(severityDistribution || {}).length && (
                       <li className="text-gray-500 text-sm">Sin alertas registradas.</li>
                     )}
                   </ul>
@@ -80,7 +162,7 @@
                   Principales Tipos de Amenaza
                 </p>
                 <ul className="space-y-3">
-                  {topThreats.map((threat) => (
+                  {displayTopThreats.map((threat) => (
                     <li key={threat.tipo} className="border border-gray-200 rounded-lg px-3 py-2">
                       <p className="font-semibold text-gray-800">{threat.tipo}</p>
                       <p className="text-xs text-gray-500 mt-1">
@@ -89,10 +171,15 @@
                       </p>
                     </li>
                   ))}
-                  {!topThreats.length && (
+                  {!displayTopThreats.length && (
                     <li className="text-gray-500 text-sm">No hay datos suficientes para destacar amenazas.</li>
                   )}
                 </ul>
+                {reportData?.document?.content && (
+                  <Button className="mt-4" onClick={handleDownload}>
+                    Descargar Reporte
+                  </Button>
+                )}
               </div>
             </div>
           </div>

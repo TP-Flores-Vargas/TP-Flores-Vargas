@@ -1,5 +1,5 @@
 (function () {
-  const { useMemo, useState } = React;
+  const { useEffect, useMemo, useState } = React;
   const { Card } = window.Common || {};
   const { CardMetric } = window.Components?.Metrics || {};
   const { AlertTriangleIcon, CheckCircleIcon, XCircleIcon } = window.Icons || {};
@@ -29,15 +29,54 @@
   const DashboardPage = () => {
     const { alerts } = useAlerts();
     const [lastActivity, setLastActivity] = useState(dayjs());
+    const [dashboardData, setDashboardData] = useState(null);
+    const [dashboardError, setDashboardError] = useState('');
 
     useInterval?.(() => setLastActivity(dayjs()), constants?.REFRESH_INTERVAL_MS ?? 30 * 1000);
 
-    const alertsToday = useMemo(
-      () => alerts.filter((alert) => dayjs(alert.timestamp).isSame(dayjs(), 'day')).length,
-      [alerts],
-    );
+    useEffect(() => {
+      let active = true;
+      const loadDashboard = async () => {
+        const api = window.Services?.api;
+        if (!api?.fetchDashboardOverview) return;
+        try {
+          const response = await api.fetchDashboardOverview();
+          if (active) {
+            setDashboardData(response);
+            setDashboardError('');
+          }
+        } catch (error) {
+          console.warn('No se pudo cargar el resumen del dashboard', error);
+          if (active) setDashboardError('Mostrando datos locales. No se pudo actualizar la información del backend.');
+        }
+      };
+      loadDashboard();
+      const refresh = setInterval(loadDashboard, constants?.REFRESH_INTERVAL_MS ?? 30 * 1000);
+      return () => {
+        active = false;
+        clearInterval(refresh);
+      };
+    }, []);
+
+    const alertsToday = useMemo(() => {
+      if (dashboardData?.summary?.trend) {
+        const today = dashboardData.summary.trend.find((item) => item.date === dayjs().format('YYYY-MM-DD'));
+        if (today) return today.total;
+      }
+      return alerts.filter((alert) => dayjs(alert.timestamp).isSame(dayjs(), 'day')).length;
+    }, [alerts, dashboardData]);
 
     const healthStatus = useMemo(() => {
+      if (dashboardData?.health) {
+        switch (dashboardData.health) {
+          case 'critical':
+            return { text: 'Alerta Crítica', color: 'bg-red-500', icon: XCircleIcon };
+          case 'warning':
+            return { text: 'Actividad Sospechosa', color: 'bg-yellow-500', icon: AlertTriangleIcon };
+          default:
+            return { text: 'Red Segura', color: 'bg-green-500', icon: CheckCircleIcon };
+        }
+      }
       const hasHigh = alerts.some(
         (alert) => alert.criticidad === 'Alta' && dayjs(alert.timestamp).isAfter(dayjs().subtract(1, 'hour')),
       );
@@ -47,19 +86,32 @@
       if (hasHigh) return { text: 'Alerta Crítica', color: 'bg-red-500', icon: XCircleIcon };
       if (hasMedium) return { text: 'Actividad Sospechosa', color: 'bg-yellow-500', icon: AlertTriangleIcon };
       return { text: 'Red Segura', color: 'bg-green-500', icon: CheckCircleIcon };
-    }, [alerts]);
+    }, [alerts, dashboardData]);
 
     const alertTypesData = useMemo(() => {
-      const counts = alerts.reduce((acc, alert) => {
-        acc[alert.tipo] = (acc[alert.tipo] || 0) + 1;
-        return acc;
-      }, {});
+      const counts = dashboardData?.summary?.byType
+        ? dashboardData.summary.byType
+        : alerts.reduce((acc, alert) => {
+            acc[alert.tipo] = (acc[alert.tipo] || 0) + 1;
+            return acc;
+          }, {});
       const values = Object.values(counts);
       const max = values.length ? Math.max(...values) : 0;
       return { counts, max };
-    }, [alerts]);
+    }, [alerts, dashboardData]);
 
     const trendData = useMemo(() => {
+      if (dashboardData?.summary?.trend) {
+        return dashboardData.summary.trend.map((item) => {
+          const date = dayjs(item.date);
+          let label = date.fromNow();
+          if (date.isSame(dayjs(), 'day')) label = 'Hoy';
+          else if (date.isSame(dayjs().subtract(1, 'day'), 'day')) label = 'Ayer';
+          else if (date.isAfter(dayjs().subtract(7, 'day'))) label = `Hace ${dayjs().diff(date, 'day')}d`;
+          else label = date.format('DD/MM');
+          return { periodo: label, total: item.total };
+        });
+      }
       const base = [
         { periodo: 'Hace 4d', total: 5 },
         { periodo: 'Hace 3d', total: 8 },
@@ -67,13 +119,22 @@
         { periodo: 'Ayer', total: 10 },
       ];
       return [...base, { periodo: 'Hoy', total: alertsToday }];
-    }, [alertsToday]);
+    }, [alertsToday, dashboardData]);
+
+    const resources = dashboardData?.resources || {
+      cpu: { value: 35, limit: 100 },
+      memory: { value: 75, limit: 100 },
+      storage: { value: 150, limit: 250 },
+      sensorsOnline: 5,
+      sensorsOffline: 1,
+    };
 
     const HealthStatusIcon = healthStatus.icon;
 
     return (
       <div className="p-8 space-y-8">
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        {dashboardError && <p className="text-sm text-yellow-400">{dashboardError}</p>}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <div className={`p-6 rounded-lg flex items-center justify-between text-white ${healthStatus.color}`}>
             <div>
@@ -90,9 +151,9 @@
           </Card>
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          <ServerStatusIndicator title="Uso de CPU" value={35} limit={100} />
-          <ServerStatusIndicator title="Uso de Memoria" value={75} limit={100} />
-          <ServerStatusIndicator title="Espacio en Disco" value={150} limit={250} />
+          <ServerStatusIndicator title="Uso de CPU" value={resources.cpu.value} limit={resources.cpu.limit} />
+          <ServerStatusIndicator title="Uso de Memoria" value={resources.memory.value} limit={resources.memory.limit} />
+          <ServerStatusIndicator title="Espacio en Disco" value={resources.storage.value} limit={resources.storage.limit} />
           <CardMetric title="Versión del Sistema" value={constants?.VERSION || 'MVP'} tone="text-white" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
