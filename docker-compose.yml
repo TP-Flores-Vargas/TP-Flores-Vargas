@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ids-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - UVICORN_WORKERS=1
+    networks:
+      - ids-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ids-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - ids-net
+
+networks:
+  ids-net:
+    driver: bridge

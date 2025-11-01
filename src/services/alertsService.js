@@ -1,15 +1,15 @@
-import { api } from './api.js';
+import { mockAlerts } from '../data/mockAlerts.js';
 
 export const alertsService = {
   async fetchAlerts() {
-    return api.getMockAlerts();
+    return Promise.resolve(mockAlerts);
   },
   async fetchAlertById(id) {
-    const alerts = await api.getMockAlerts();
+    const alerts = await this.fetchAlerts();
     return alerts.find((alert) => alert.id === id) ?? null;
   },
   async fetchSummary() {
-    const alerts = await api.getMockAlerts();
+    const alerts = await this.fetchAlerts();
     return alerts.reduce(
       (acc, alert) => {
         acc.total += 1;
