@@ -124,6 +124,26 @@ DEFAULT_PROTOCOLS = [
     ProtocolEnum.dns,
 ]
 
+SEVERITY_WEIGHT = {
+    SeverityEnum.low: 0,
+    SeverityEnum.medium: 1,
+    SeverityEnum.high: 2,
+    SeverityEnum.critical: 3,
+}
+
+SEVERITY_FLOOR = {
+    AttackTypeEnum.benign: SeverityEnum.low,
+    AttackTypeEnum.portscan: SeverityEnum.medium,
+    AttackTypeEnum.dos: SeverityEnum.high,
+    AttackTypeEnum.ddos: SeverityEnum.high,
+    AttackTypeEnum.bruteforce: SeverityEnum.high,
+    AttackTypeEnum.xss: SeverityEnum.high,
+    AttackTypeEnum.sqli: SeverityEnum.high,
+    AttackTypeEnum.bot: SeverityEnum.high,
+    AttackTypeEnum.infiltration: SeverityEnum.critical,
+    AttackTypeEnum.other: SeverityEnum.high,
+}
+
 
 class SyntheticAlertGenerator:
     def __init__(self, seed: int = 42):
@@ -155,6 +175,16 @@ class SyntheticAlertGenerator:
         if score >= 0.4:
             return SeverityEnum.medium
         return SeverityEnum.low
+
+    def _enforce_severity_floor(
+        self, attack_type: AttackTypeEnum, severity: SeverityEnum
+    ) -> SeverityEnum:
+        floor = SEVERITY_FLOOR.get(attack_type)
+        if not floor:
+            return severity
+        if SEVERITY_WEIGHT[severity] < SEVERITY_WEIGHT[floor]:
+            return floor
+        return severity
 
     def _model_score(self, severity: SeverityEnum) -> float:
         mu_sigma = {
@@ -199,6 +229,7 @@ class SyntheticAlertGenerator:
         rule_id, rule_name = self._rule_for_attack(attack_type)
         raw_score = self.random.random()
         severity = self._map_severity(raw_score, attack_type)
+        severity = self._enforce_severity_floor(attack_type, severity)
         score = self._model_score(severity)
         model_label = self._model_label(score, dataset_label)
         timestamp = datetime.utcnow() - timedelta(minutes=self.random.randint(0, 120))

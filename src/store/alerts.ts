@@ -44,7 +44,7 @@ export interface AlertsState {
   exportCsv: () => Promise<Blob>;
 }
 
-const defaultFilters = {
+export const defaultFilters = {
   severity: [] as Severity[],
   attack_type: [] as AttackType[],
   protocol: [] as Protocol[],

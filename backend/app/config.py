@@ -13,9 +13,9 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
     ingestion_mode: str = "SYNTHETIC_SEED"
-    synthetic_seed_count: int = 750
+    synthetic_seed_count: int = 200
     synthetic_seed: int = 42
-    synthetic_rate_per_min: int = 30
+    synthetic_rate_per_min: int = 5
     replay_speed: float = 1.0
     stream_mode: str = "SSE"
 

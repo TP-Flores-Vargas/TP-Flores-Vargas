@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 
+import { fetchAlerts } from "../api/alerts";
 import Card from "../components/common/Card.jsx";
+import { SeverityBadge } from "../components/SeverityBadge";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { useAlertsStore } from "../store/alerts";
 
@@ -21,52 +23,84 @@ const SectionTitle = ({ title, description }) => (
 );
 
 const ReportsPage = () => {
-  const { items, metrics, loadAlerts, refreshMetrics, exportCsv } = useAlertsStore();
+  const { metrics, refreshMetrics, exportCsv } = useAlertsStore();
   const [rangeKey, setRangeKey] = useState("24h");
   const [downloading, setDownloading] = useState(false);
   const [summaryDownloading, setSummaryDownloading] = useState(false);
+  const [reportAlerts, setReportAlerts] = useState([]);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [rangeError, setRangeError] = useState(null);
 
   useEffect(() => {
-    if (!items.length) {
-      loadAlerts();
-    }
     if (!metrics) {
       refreshMetrics();
     }
-  }, [items.length, metrics, loadAlerts, refreshMetrics]);
+  }, [metrics, refreshMetrics]);
 
   const selectedRange = RANGE_OPTIONS[rangeKey];
   const rangeStart = dayjs().subtract(selectedRange.hours, "hour");
 
-  const rangeAlerts = useMemo(
-    () => items.filter((alert) => dayjs(alert.timestamp).isAfter(rangeStart)),
-    [items, rangeStart],
-  );
+  const loadRangeAlerts = useCallback(async () => {
+    setReportLoading(true);
+    setRangeError(null);
+    try {
+      const aggregated = [];
+      const pageSize = 400;
+      let page = 1;
+      while (page <= 5) {
+        const data = await fetchAlerts({
+          page,
+          page_size: pageSize,
+          sort: "-timestamp",
+          from_ts: rangeStart.toISOString(),
+        });
+        aggregated.push(...data.items);
+        if (data.items.length < pageSize) {
+          break;
+        }
+        page += 1;
+      }
+      setReportAlerts(aggregated);
+    } catch (error) {
+      console.error("No se pudo cargar el rango", error);
+      setRangeError("No se pudo cargar el periodo seleccionado.");
+    } finally {
+      setReportLoading(false);
+    }
+  }, [rangeStart]);
+
+  useEffect(() => {
+    loadRangeAlerts();
+  }, [loadRangeAlerts]);
+
+  const rangeAlerts = reportAlerts;
 
   const severityOrder = ["Critical", "High", "Medium", "Low"];
-  const severityTotals = useMemo(() => {
-    return severityOrder.map((level) => ({
-      level,
-      count: rangeAlerts.filter((alert) => alert.severity === level).length,
-    }));
-  }, [rangeAlerts]);
+  const severityTotals = useMemo(
+    () =>
+      severityOrder.map((level) => ({
+        level,
+        count: rangeAlerts.filter((alert) => alert.severity === level).length,
+      })),
+    [rangeAlerts],
+  );
 
   const attackDistribution = useMemo(() => {
-    const map = rangeAlerts.reduce((acc, alert) => {
+    const counts = rangeAlerts.reduce((acc, alert) => {
       acc[alert.attack_type] = (acc[alert.attack_type] || 0) + 1;
       return acc;
     }, {});
-    return Object.entries(map)
+    return Object.entries(counts)
       .map(([attack, count]) => ({ attack, count }))
       .sort((a, b) => b.count - a.count);
   }, [rangeAlerts]);
 
   const topRules = useMemo(() => {
-    const map = rangeAlerts.reduce((acc, alert) => {
+    const counts = rangeAlerts.reduce((acc, alert) => {
       acc[alert.rule_name] = (acc[alert.rule_name] || 0) + 1;
       return acc;
     }, {});
-    return Object.entries(map)
+    return Object.entries(counts)
       .map(([rule, count]) => ({ rule, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
@@ -74,8 +108,7 @@ const ReportsPage = () => {
 
   const averageScore = useMemo(() => {
     if (!rangeAlerts.length) return 0;
-    const sum = rangeAlerts.reduce((acc, alert) => acc + alert.model_score, 0);
-    return sum / rangeAlerts.length;
+    return rangeAlerts.reduce((sum, alert) => sum + alert.model_score, 0) / rangeAlerts.length;
   }, [rangeAlerts]);
 
   const maliciousRatio = useMemo(() => {
@@ -84,17 +117,16 @@ const ReportsPage = () => {
     return Math.round((malicious / rangeAlerts.length) * 100);
   }, [rangeAlerts]);
 
-  const uniqueSources = useMemo(() => new Set(rangeAlerts.map((alert) => alert.src_ip)).size, [rangeAlerts]);
+  const uniqueSources = useMemo(
+    () => new Set(rangeAlerts.map((alert) => alert.src_ip)).size,
+    [rangeAlerts],
+  );
 
   const tableRows = useMemo(
     () =>
-      rangeAlerts.slice(0, 12).map((alert) => ({
-        id: alert.id,
-        severity: alert.severity,
-        attack: alert.attack_type,
-        rule: alert.rule_name,
-        score: alert.model_score,
-        timestamp: dayjs(alert.timestamp).format("DD MMM HH:mm"),
+      rangeAlerts.slice(0, 15).map((alert) => ({
+        ...alert,
+        timestampLabel: dayjs(alert.timestamp).format("DD MMM HH:mm"),
       })),
     [rangeAlerts],
   );
@@ -119,24 +151,24 @@ const ReportsPage = () => {
   const handleSummaryDownload = () => {
     setSummaryDownloading(true);
     try {
-      const payload = {
-        generated_at: dayjs().toISOString(),
-        range: RANGE_OPTIONS[rangeKey].label,
-        totals: {
-          alerts: rangeAlerts.length,
-          avg_score: Number(averageScore.toFixed(3)),
-          malicious_ratio: maliciousRatio,
-          unique_sources: uniqueSources,
-        },
-        severity_breakdown: severityTotals,
-        top_attack_types: attackDistribution.slice(0, 5),
-        top_rules,
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const rows = [
+        ["Sección", "Clave", "Valor"],
+        ["Resumen", "Generado", dayjs().format("YYYY-MM-DD HH:mm:ss")],
+        ["Resumen", "Rango", selectedRange.label],
+        ["Resumen", "Alertas", rangeAlerts.length],
+        ["Resumen", "Score Promedio", averageScore.toFixed(2)],
+        ["Resumen", "% Maliciosas", `${maliciousRatio}%`],
+        ["Resumen", "IPs Únicas", uniqueSources],
+      ];
+      severityTotals.forEach(({ level, count }) => rows.push(["Severidad", level, count]));
+      attackDistribution.slice(0, 5).forEach(({ attack, count }) => rows.push(["Ataques", attack, count]));
+      topRules.forEach(({ rule, count }) => rows.push(["Reglas", rule, count]));
+      const csv = rows.map((cols) => cols.map((col) => `"${String(col).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `alerts-summary-${dayjs().format("YYYYMMDD-HHmmss")}.json`;
+      link.download = `alerts-summary-${dayjs().format("YYYYMMDD-HHmmss")}.csv`;
       link.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -158,7 +190,7 @@ const ReportsPage = () => {
             disabled={downloading}
             className="inline-flex items-center gap-2 rounded-lg bg-sky-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
           >
-            {downloading ? "Generando CSV..." : "Descargar CSV"}
+            {downloading ? "Generando CSV..." : "Descargar CSV de alertas"}
           </button>
           <button
             type="button"
@@ -166,32 +198,34 @@ const ReportsPage = () => {
             disabled={summaryDownloading}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:text-white disabled:opacity-60"
           >
-            {summaryDownloading ? "Generando informe..." : "Descargar informe"}
+            {summaryDownloading ? "Compilando..." : "Descargar informe"}
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {Object.entries(RANGE_OPTIONS).map(([key, value]) => (
           <button
             key={key}
             type="button"
             onClick={() => setRangeKey(key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-              rangeKey === key
-                ? "bg-sky-500 text-white"
-                : "bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700"
+            aria-pressed={rangeKey === key}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium border transition ${
+              rangeKey === key ? "bg-sky-500 text-white border-sky-400" : "bg-gray-900 text-gray-300 border-gray-700"
             }`}
           >
             {value.label}
           </button>
         ))}
+        {reportLoading && <span className="text-xs text-gray-400">Actualizando rango...</span>}
+        {rangeError && <span className="text-xs text-red-400">{rangeError}</span>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <p className="text-sm text-gray-400">Alertas en el periodo</p>
           <p className="text-3xl font-bold text-white mt-1">{formatNumber(rangeAlerts.length)}</p>
+          <p className="text-xs text-gray-500 mt-1">{selectedRange.label}</p>
         </Card>
         <Card>
           <p className="text-sm text-gray-400">Promedio de score</p>
@@ -232,10 +266,7 @@ const ReportsPage = () => {
           </div>
         </Card>
         <Card>
-          <SectionTitle
-            title="Serie temporal (24h)"
-            description="Compara el ritmo actual contra las últimas 24 horas."
-          />
+          <SectionTitle title="Serie temporal (24h)" description="Comparativo contra la última jornada." />
           <TimeSeriesMini series={metrics?.last24h_series ?? []} />
         </Card>
       </div>
@@ -246,7 +277,7 @@ const ReportsPage = () => {
           <ul className="space-y-3">
             {attackDistribution.slice(0, 5).map(({ attack, count }) => (
               <li key={attack} className="flex items-center justify-between text-sm text-gray-300">
-                <span>{attack}</span>
+                <span className="px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700 text-xs">{attack}</span>
                 <span className="font-semibold text-white">{count}</span>
               </li>
             ))}
@@ -286,17 +317,23 @@ const ReportsPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-800 text-gray-200">
               {tableRows.map((row) => (
-                <tr key={row.id}>
-                  <td className="py-3 pr-4 whitespace-nowrap">{row.timestamp}</td>
-                  <td className="py-3 pr-4">{row.severity}</td>
-                  <td className="py-3 pr-4">{row.attack}</td>
+                <tr key={row.id} className="hover:bg-slate-900/60 transition">
+                  <td className="py-3 pr-4 whitespace-nowrap">{row.timestampLabel}</td>
+                  <td className="py-3 pr-4">
+                    <SeverityBadge value={row.severity} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span className="px-2 py-1 rounded-full bg-gray-800 text-xs border border-gray-700">
+                      {row.attack}
+                    </span>
+                  </td>
                   <td className="py-3 pr-4 truncate max-w-xs">{row.rule}</td>
-                  <td className="py-3">{row.score.toFixed(2)}</td>
+                  <td className="py-3 font-semibold">{row.model_score.toFixed(2)}</td>
                 </tr>
               ))}
               {!tableRows.length && (
                 <tr>
-                  <td colSpan="5" className="py-6 text-center text-gray-400">
+                  <td colSpan={5} className="py-6 text-center text-gray-400">
                     No hay alertas registradas en el periodo seleccionado.
                   </td>
                 </tr>

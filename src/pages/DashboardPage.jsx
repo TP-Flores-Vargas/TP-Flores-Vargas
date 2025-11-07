@@ -9,32 +9,63 @@ import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { constants } from "../config/constants.js";
 import { useInterval } from "../hooks/useInterval.js";
-import { useAlertsStore } from "../store/alerts";
+import { defaultFilters, useAlertsStore } from "../store/alerts";
 
 dayjs.extend(relativeTime);
 
-const ServerStatusIndicator = ({ title, value, limit }) => {
-  const percentage = (value / limit) * 100;
-  let colorClass = "bg-green-500";
-  if (percentage > 90) colorClass = "bg-red-500";
-  else if (percentage > 70) colorClass = "bg-yellow-500";
+const severityRank = {
+  Critical: 4,
+  High: 3,
+  Medium: 2,
+  Low: 1,
+};
 
+const ServerStatusIndicator = ({ status, causes, onNavigateAlerts }) => {
+  const HealthIcon = status.icon;
   return (
-    <Card>
-      <p className="text-sm font-medium text-gray-400">{title}</p>
-      <p className="text-2xl font-bold text-white mt-1">
-        {value}
-        {title.includes("Uso") ? "%" : " GB"}
-      </p>
-      <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-        <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${percentage}%` }} />
+    <Card className="relative overflow-hidden text-white border border-white/10">
+      <div className={`absolute inset-0 ${status.color}`} aria-hidden />
+      <div className="relative flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium opacity-80">Estado de la Red</p>
+          <p className="text-2xl font-bold">{status.text}</p>
+          <p className="text-[11px] opacity-75 mt-1">{status.helper}</p>
+        </div>
+        <HealthIcon className="w-10 h-10 opacity-70" />
       </div>
+      {causes.length > 0 && (
+        <div className="relative mt-4 space-y-2 text-sm bg-black/30 rounded-lg p-3">
+          <p className="text-xs uppercase tracking-wide opacity-80">Causas recientes</p>
+          {causes.map((alert) => (
+            <button
+              key={alert.id}
+              type="button"
+              className="w-full text-left hover:underline"
+              onClick={() =>
+                onNavigateAlerts({
+                  severity: [alert.severity],
+                  query: alert.rule_name,
+                })
+              }
+            >
+              <span className="font-semibold">{alert.attack_type}</span> · {alert.rule_name}
+            </button>
+          ))}
+        </div>
+      )}
     </Card>
   );
 };
 
-const DashboardPage = () => {
-  const { items: alerts, metrics, loadAlerts, refreshMetrics } = useAlertsStore();
+const DashboardPage = ({ onNavigate }) => {
+  const {
+    items: alerts,
+    metrics,
+    loadAlerts,
+    refreshMetrics,
+    setFilters,
+    setSelectedAlert,
+  } = useAlertsStore();
   const [lastActivity, setLastActivity] = useState(dayjs());
 
   useEffect(() => {
@@ -53,6 +84,11 @@ const DashboardPage = () => {
     [alerts],
   );
 
+  const applyFiltersAndNavigate = (partialFilters = {}) => {
+    setFilters({ ...defaultFilters, ...partialFilters });
+    onNavigate?.("alertas");
+  };
+
   const healthStatus = useMemo(() => {
     const hasCritical = alerts.some(
       (alert) =>
@@ -61,9 +97,34 @@ const DashboardPage = () => {
     const hasHigh = alerts.some(
       (alert) => alert.severity === "High" && dayjs(alert.timestamp).isAfter(dayjs().subtract(1, "hour")),
     );
-    if (hasCritical) return { text: "Alerta Crítica", color: "bg-red-500", icon: XCircleIcon };
-    if (hasHigh) return { text: "Actividad Sospechosa", color: "bg-yellow-500", icon: AlertTriangleIcon };
-    return { text: "Red Segura", color: "bg-green-500", icon: CheckCircleIcon };
+    if (hasCritical)
+      return {
+        text: "Alerta Crítica",
+        color: "bg-red-600/80",
+        icon: XCircleIcon,
+        helper: "Se detectaron incidentes críticos en los últimos 30 min.",
+      };
+    if (hasHigh)
+      return {
+        text: "Actividad Sospechosa",
+        color: "bg-yellow-600/80",
+        icon: AlertTriangleIcon,
+        helper: "Hay actividad de alto riesgo en la última hora.",
+      };
+    return {
+      text: "Red Segura",
+      color: "bg-green-600/80",
+      icon: CheckCircleIcon,
+      helper: "Sin incidentes de severidad alta registrados recientemente.",
+    };
+  }, [alerts]);
+
+  const statusCauses = useMemo(() => {
+    const windowStart = dayjs().subtract(2, "hour");
+    return alerts
+      .filter((alert) => dayjs(alert.timestamp).isAfter(windowStart))
+      .sort((a, b) => severityRank[b.severity] - severityRank[a.severity])
+      .slice(0, 3);
   }, [alerts]);
 
   const attackDistribution = useMemo(() => {
@@ -90,22 +151,26 @@ const DashboardPage = () => {
     [alerts],
   );
 
-  const HealthStatusIcon = healthStatus.icon;
-
   const handleDownloadSummary = () => {
-    const payload = {
-      generated_at: dayjs().toISOString(),
-      totals: {
-        today: alertsToday,
-        severity: metrics?.counts_by_severity ?? {},
-      },
-      top_attack_types: attackDistribution.sorted.slice(0, 5),
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const rows = [
+      ["Sección", "Clave", "Valor"],
+      ["Resumen", "Generado", dayjs().format("YYYY-MM-DD HH:mm:ss")],
+      ["Resumen", "Alertas Hoy", alertsToday],
+      ["Resumen", "Alertas Totales (muestra)", alerts.length],
+    ];
+    const severityCounts = metrics?.counts_by_severity ?? {};
+    Object.entries(severityCounts).forEach(([severity, count]) => {
+      rows.push(["Severidad", severity, count]);
+    });
+    attackDistribution.sorted.slice(0, 5).forEach(([tipo, total]) => {
+      rows.push(["Top Ataques", tipo, total]);
+    });
+    const csv = rows.map((cols) => cols.map((col) => `"${String(col).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `dashboard-summary-${dayjs().format("YYYYMMDD-HHmmss")}.json`;
+    anchor.download = `dashboard-resumen-${dayjs().format("YYYYMMDD-HHmmss")}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -141,22 +206,37 @@ const DashboardPage = () => {
         </button>
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <div className={`p-6 rounded-lg flex items-center justify-between text-white ${healthStatus.color}`}>
-          <div>
-            <p className="text-sm font-medium opacity-80">Estado de la Red</p>
-            <p className="text-2xl font-bold">{healthStatus.text}</p>
-            <p className="text-[11px] opacity-75 mt-1">
-              Última actividad {lastActivity.format("h:mm:ss A")}
-            </p>
-          </div>
-          <HealthStatusIcon className="w-10 h-10 opacity-70" />
-        </div>
-        <CardMetric title="Alertas Hoy" value={alertsToday} />
-        <CardMetric title="Alertas Totales" value={alerts.length} />
+        <ServerStatusIndicator
+          status={{ ...healthStatus, helper: `${healthStatus.helper} Última actualización ${lastActivity.format("HH:mm:ss")}` }}
+          causes={statusCauses}
+          onNavigateAlerts={(partial) => applyFiltersAndNavigate(partial)}
+        />
+        <CardMetric
+          title="Alertas Hoy"
+          value={alertsToday}
+          description="Ir a la vista con ese rango"
+          onClick={() =>
+            applyFiltersAndNavigate({
+              from_ts: dayjs().startOf("day").format("YYYY-MM-DDTHH:mm"),
+              to_ts: dayjs().endOf("day").format("YYYY-MM-DDTHH:mm"),
+            })
+          }
+        />
+        <CardMetric
+          title="Alertas Totales (muestra)"
+          value={alerts.length}
+          description="Ver todas las alertas"
+          onClick={() => applyFiltersAndNavigate({ ...defaultFilters })}
+        />
         <CardMetric title="Versión del Sistema" value={constants.VERSION || "MVP"} tone="text-white" />
       </div>
 
-      <StatsCards counts={metrics?.counts_by_severity ?? null} />
+      <StatsCards
+        counts={metrics?.counts_by_severity ?? null}
+        onFilter={(severity) =>
+          applyFiltersAndNavigate(severity ? { severity: [severity] } : { ...defaultFilters })
+        }
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-2">
@@ -170,15 +250,24 @@ const DashboardPage = () => {
           <h2 className="text-lg font-semibold text-white mb-4">Alertas Recientes</h2>
           <ul className="space-y-3">
             {recentAlerts.map((alert) => (
-              <li key={alert.id} className="flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-semibold text-white">{alert.label}</p>
-                  <p className="text-xs text-gray-400">Regla: {alert.rule}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500 block">{alert.timestamp}</span>
-                  <span className="text-xs uppercase tracking-wide text-gray-400">{alert.severity}</span>
-                </div>
+              <li key={alert.id}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between text-sm hover:text-white"
+                  onClick={() => {
+                    setSelectedAlert(alert);
+                    applyFiltersAndNavigate({ query: alert.rule_name });
+                  }}
+                >
+                  <div className="text-left">
+                    <p className="font-semibold text-white">{alert.label}</p>
+                    <p className="text-xs text-gray-400">Regla: {alert.rule}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-gray-500 block">{alert.timestamp}</span>
+                    <span className="text-xs uppercase tracking-wide text-gray-400">{alert.severity}</span>
+                  </div>
+                </button>
               </li>
             ))}
             {!recentAlerts.length && <p className="text-gray-400 text-sm">Sin actividad reciente.</p>}
@@ -193,7 +282,12 @@ const DashboardPage = () => {
             {attackDistribution.sorted.map(([tipo, total]) => {
               const percentage = attackDistribution.max ? Math.round((total / attackDistribution.max) * 100) : 0;
               return (
-                <div key={tipo}>
+                <button
+                  key={tipo}
+                  type="button"
+                  onClick={() => applyFiltersAndNavigate({ attack_type: [tipo] })}
+                  className="w-full text-left"
+                >
                   <div className="flex justify-between text-sm text-gray-300">
                     <span>{tipo}</span>
                     <span className="font-semibold text-white">{total}</span>
@@ -201,7 +295,7 @@ const DashboardPage = () => {
                   <div className="w-full bg-gray-800/60 rounded-full h-2 mt-1">
                     <div className="h-2 rounded-full bg-blue-500" style={{ width: `${percentage}%` }} />
                   </div>
-                </div>
+                </button>
               );
             })}
             {!attackDistribution.sorted.length && (
@@ -210,9 +304,39 @@ const DashboardPage = () => {
           </div>
         </Card>
         <div className="grid gap-4">
-          <ServerStatusIndicator title="Uso de CPU" value={35} limit={100} />
-          <ServerStatusIndicator title="Uso de Memoria" value={75} limit={100} />
-          <ServerStatusIndicator title="Espacio en Disco" value={150} limit={250} />
+          <Card>
+            <p className="text-sm font-medium text-gray-400">Uso de CPU</p>
+            <div className="flex items-end justify-between mt-2">
+              <p className="text-2xl font-bold text-white">35%</p>
+              <button
+                type="button"
+                className="text-xs text-sky-300 underline"
+                onClick={() => applyFiltersAndNavigate({ protocol: ["TCP"] })}
+              >
+                Ver procesos
+              </button>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+              <div className="bg-green-500 h-2.5 rounded-full" style={{ width: "35%" }} />
+            </div>
+          </Card>
+          <Card>
+            <p className="text-sm font-medium text-gray-400">Uso de Memoria</p>
+            <div className="flex items-end justify-between mt-2">
+              <p className="text-2xl font-bold text-white">75%</p>
+              <span className="text-xs text-gray-400">Nodos IDS</span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+              <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: "75%" }} />
+            </div>
+          </Card>
+          <Card>
+            <p className="text-sm font-medium text-gray-400">Espacio en Disco</p>
+            <p className="text-2xl font-bold text-white mt-2">150 / 250 GB</p>
+            <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+              <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: "60%" }} />
+            </div>
+          </Card>
         </div>
       </div>
     </div>

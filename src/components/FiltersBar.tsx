@@ -45,7 +45,7 @@ export const FiltersBar = ({
   onExport,
   loading,
 }: Props) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const toggleValue = (key: "severity" | "attack_type" | "protocol", value: string) => {
     const list = filters[key];
@@ -122,7 +122,7 @@ export const FiltersBar = ({
             className="px-3 py-1 text-xs border border-gray-600 rounded text-gray-300 hover:text-white"
             onClick={() => setCollapsed((prev) => !prev)}
           >
-            {collapsed ? "Mostrar" : "Ocultar"}
+            {collapsed ? "Mostrar filtros" : "Ocultar filtros"}
           </button>
         </div>
       </div>

@@ -60,6 +60,19 @@ fi
 BACKEND_PID=$!
 popd >/dev/null
 
+echo "Esperando a que el backend responda /health..."
+BACKEND_READY=0
+for attempt in {1..30}; do
+  if curl -sf "http://127.0.0.1:8000/health" >/dev/null 2>&1; then
+    BACKEND_READY=1
+    break
+  fi
+  sleep 1
+done
+if [[ $BACKEND_READY -ne 1 ]]; then
+  echo "Advertencia: el backend no respondió /health tras 30s; el frontend podría mostrar errores temporales." >&2
+fi
+
 cleanup() {
   if ps -p "$BACKEND_PID" >/dev/null 2>&1; then
     kill "$BACKEND_PID"

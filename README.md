@@ -29,7 +29,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- `.env` soporta: `DATABASE_URL`, `ALLOW_ORIGINS`, `INGESTION_MODE` (`SYNTHETIC_SEED`, `REPLAY_CSV`, `LIVE_EMULATION`), `SYNTHETIC_RATE_PER_MIN`, `REPLAY_SPEED`, `STREAM_MODE` (`SSE|WS`), `SYNTHETIC_SEED`.
+- `.env` soporta: `DATABASE_URL`, `ALLOW_ORIGINS`, `INGESTION_MODE` (`SYNTHETIC_SEED`, `REPLAY_CSV`, `LIVE_EMULATION`), `SYNTHETIC_RATE_PER_MIN`, `REPLAY_SPEED`, `STREAM_MODE` (`SSE|WS`), `SYNTHETIC_SEED`, `SYNTHETIC_SEED_COUNT`. Por defecto se siembran **200** alertas y el live emitter genera **≈5 alertas/min** para que el arranque local sea más ágil; ajusta estos valores en `backend/.env` si necesitas mayor volumen.
 - Endpoints principales: `/alerts`, `/alerts/{id}`, `/alerts/export.csv`, `/metrics/overview`, `/stream` (SSE), `/health`.
 - Tests: `pytest backend/tests`.
 
@@ -56,6 +56,7 @@ chmod +x start.sh
 ```
 
 - Si `backend/venv` no existe, se crea y se instalan dependencias (usa `pip --target <site-packages>` si el venv no trae pip). Para forzar reinstalación tras editar `requirements.txt`, elimina `backend/venv/.deps_installed`.
+- Tras lanzar Uvicorn, el script espera a que `http://127.0.0.1:8000/health` responda antes de iniciar Vite, evitando los timeouts iniciales del frontend.
 - El backend corre en segundo plano; al presionar `Ctrl+C` en Vite se limpia el proceso de Uvicorn.
 
 **Detener/retomar**  
@@ -65,7 +66,7 @@ chmod +x start.sh
 ---
 
 ### Generación sintética y replay
-- Seed automático en el arranque (`SYNTHETIC_SEED_COUNT`, por defecto 750) + emisor en vivo (`SYNTHETIC_RATE_PER_MIN`).
+- Seed automático en el arranque (`SYNTHETIC_SEED_COUNT`, por defecto 200) + emisor en vivo (`SYNTHETIC_RATE_PER_MIN`, por defecto 5).
 - CLI adicional:
   ```bash
   python tools/synthetic_alert_generator.py --mode http --count 500 --seed 42
