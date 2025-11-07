@@ -1,0 +1,182 @@
+import dayjs from "dayjs";
+import { useMemo, useState } from "react";
+
+import type { Alert, AttackType } from "../api/alerts";
+import { SeverityBadge } from "./SeverityBadge";
+
+const PLAYBOOK_FALLBACK: Record<AttackType, string[]> = {
+  Benign: ["Registrar el evento para entrenamiento futuro.", "Verificar falsos positivos.", "No se requiere acción inmediata."],
+  DoS: [
+    "Aplicar rate-limiting en el servicio impactado.",
+    "Bloquear temporalmente la IP de origen en el firewall.",
+    "Notificar al equipo de redes si la saturación continúa.",
+  ],
+  DDoS: [
+    "Activar mitigación DDoS en el borde o proveedor.",
+    "Coordinar con el ISP para filtrar prefijos maliciosos.",
+    "Monitorizar métricas de disponibilidad cada 5 minutos.",
+  ],
+  PortScan: [
+    "Bloquear la IP ofensora en el firewall perimetral.",
+    "Auditar servicios expuestos en el segmento escaneado.",
+    "Revisar logs para intentos subsecuentes.",
+  ],
+  BruteForce: [
+    "Habilitar MFA en los servicios atacados.",
+    "Bloquear la IP origen y rotar credenciales afectadas.",
+    "Revisar registros de autenticación fallida.",
+  ],
+  XSS: [
+    "Aplicar reglas WAF que bloqueen payloads detectados.",
+    "Validar sanitización en la aplicación objetivo.",
+    "Notificar al equipo de desarrollo para corregir inputs.",
+  ],
+  SQLi: [
+    "Bloquear patrones en WAF/IDS.",
+    "Ejecutar escaneo de la aplicación en busca de inyecciones.",
+    "Verificar integridad de la base de datos y respaldos.",
+  ],
+  Bot: [
+    "Aislar el host infectado y ejecutar análisis DFIR.",
+    "Revocar credenciales utilizadas desde el dispositivo.",
+    "Monitorear tráfico hacia dominios C2 relacionados.",
+  ],
+  Infiltration: [
+    "Aislar el activo comprometido inmediatamente.",
+    "Coordinar con equipo forense para preservar evidencia.",
+    "Iniciar plan de respuesta a incidentes completo.",
+  ],
+  Other: [
+    "Revisar la consola de Zeek/IDS para más contexto.",
+    "Correlacionar con otras alertas del mismo origen.",
+    "Escalar al SOC si el comportamiento se repite.",
+  ],
+};
+
+const TITLE_MAP: Partial<Record<AttackType, string>> = {
+  Bot: "Malware Detectado",
+  DDoS: "Ataque Distribuido Detectado",
+  DoS: "Ataque de Denegación Detectado",
+  PortScan: "Escaneo de Puertos Detectado",
+  BruteForce: "Ataque de Fuerza Bruta",
+  XSS: "Intento de XSS",
+  SQLi: "Intento de SQL Injection",
+  Infiltration: "Infiltración Detectada",
+};
+
+interface Props {
+  alert: Alert;
+  onClose: () => void;
+}
+
+export const AlertDrawer = ({ alert, onClose }: Props) => {
+  const [jsonOpen, setJsonOpen] = useState(false);
+  const summary = (alert.meta?.summary as string) || TITLE_MAP[alert.attack_type] || alert.attack_type;
+  const actions =
+    (Array.isArray(alert.meta?.playbook) && (alert.meta?.playbook as string[]).length > 0
+      ? (alert.meta?.playbook as string[])
+      : PLAYBOOK_FALLBACK[alert.attack_type]) ?? PLAYBOOK_FALLBACK.Other;
+
+  const jsonString = useMemo(() => JSON.stringify(alert, null, 2), [alert]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(jsonString);
+    } catch (error) {
+      console.error("copy failed", error);
+    }
+  };
+
+  return (
+    <aside
+      data-testid="alert-drawer"
+      className="w-[420px] bg-slate-900 border-l border-gray-700/70 h-full p-6 flex flex-col gap-4"
+    >
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-gray-800">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-400">Alerta</p>
+          <h2 className="text-2xl font-bold text-white">{TITLE_MAP[alert.attack_type] || alert.attack_type}</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            {dayjs(alert.timestamp).format("dddd, D [de] MMMM YYYY, h:mm A")}
+          </p>
+        </div>
+        <SeverityBadge value={alert.severity} />
+      </div>
+
+      <section>
+        <h3 className="text-sm font-semibold text-gray-300 mb-2">Resumen del incidente</h3>
+        <p className="text-sm text-gray-400 leading-relaxed">{summary}</p>
+      </section>
+
+      <section>
+      <h3 className="text-sm font-semibold text-gray-300 mb-2">QUÉ HACER AHORA</h3>
+        <ul className="list-decimal text-sm text-gray-200 pl-4 space-y-2">
+          {actions.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold text-gray-300 mb-2">Detalles técnicos</h3>
+        <div className="text-xs text-gray-300 space-y-2">
+          <div className="flex justify-between gap-4">
+            <span>IP Origen</span>
+            <span className="font-mono">{alert.src_ip}:{alert.src_port}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>IP Destino</span>
+            <span className="font-mono">{alert.dst_ip}:{alert.dst_port}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>Protocolo</span>
+            <span>{alert.protocol}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>Regla</span>
+            <span>{alert.rule_id} — {alert.rule_name}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>Modelo</span>
+            <span>{(alert.model_score * 100).toFixed(1)}% — {alert.model_label}</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <button
+          type="button"
+          className="text-sky-400 text-sm underline"
+          onClick={() => setJsonOpen((prev) => !prev)}
+        >
+          {jsonOpen ? "Ocultar JSON crudo" : "Ver JSON crudo"}
+        </button>
+        {jsonOpen && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="text-xs text-emerald-300 underline mb-2"
+            >
+              Copiar JSON
+            </button>
+            <pre
+              data-testid="alert-json"
+              className="bg-black/40 text-xs text-emerald-100 p-3 rounded border border-gray-800 overflow-auto max-h-48"
+            >
+              {jsonString}
+            </pre>
+          </div>
+        )}
+      </section>
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-auto text-sm text-gray-400 hover:text-gray-200 underline"
+      >
+        Cerrar
+      </button>
+    </aside>
+  );
+};

@@ -1,0 +1,132 @@
+{
+  "info": {
+    "name": "alerts_mvp",
+    "_postman_id": "6fe7a721-bf2c-4af5-9029-0b2fb8d1e9f9",
+    "description": "Colección QA para el MVP de alertas IDS.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "POST /alerts (sample)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"timestamp\": \"2025-01-01T00:00:00Z\",\n  \"severity\": \"High\",\n  \"attack_type\": \"DoS\",\n  \"src_ip\": \"10.0.0.10\",\n  \"src_port\": 4444,\n  \"dst_ip\": \"192.168.0.10\",\n  \"dst_port\": 80,\n  \"protocol\": \"TCP\",\n  \"rule_id\": \"QA-1001\",\n  \"rule_name\": \"QA Seed\",\n  \"model_score\": 0.83,\n  \"model_label\": \"malicious\",\n  \"meta\": {\"dataset_label\": \"DoS Hulk\"}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/alerts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "alerts"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /alerts (filters)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/alerts?severity=High&attack_type=DoS&page=1&page_size=25",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "alerts"
+          ],
+          "query": [
+            {
+              "key": "severity",
+              "value": "High"
+            },
+            {
+              "key": "attack_type",
+              "value": "DoS"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "page_size",
+              "value": "25"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /alerts/{id}",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/alerts/{{alertId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "alerts",
+            "{{alertId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /metrics/overview",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/metrics/overview",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "metrics",
+            "overview"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /alerts/export.csv",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/alerts/export.csv?severity=High",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "alerts",
+            "export.csv"
+          ],
+          "query": [
+            {
+              "key": "severity",
+              "value": "High"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "alertId",
+      "value": ""
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import AlertsPage from '../pages/AlertsPage.jsx';
+import AlertsPage from '../pages/AlertsPage';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import HelpPage from '../pages/HelpPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
