@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .adapters.zeek_adapter import ZeekAdapter
 from .config import get_settings
 from .db import SessionLocal, init_db
 from .dependencies import get_alerts_service, stream_manager
 from .repositories.alerts_repo import AlertRepository
-from .routers import alerts, metrics, stream
+from .routers import alerts, metrics, stream, zeek_lab
 from .services.alerts_service import AlertsService
 from .services.generators.synthetic_generator import SyntheticAlertGenerator
+from .services.model_provider import get_model_adapter
+from .services.synthetic_control import start_synthetic_emitter, stop_synthetic_emitter
 
 settings = get_settings()
 app = FastAPI(title="IDS API", version="1.0.0")
@@ -28,6 +30,7 @@ app.add_middleware(
 app.include_router(alerts.router)
 app.include_router(metrics.router)
 app.include_router(stream.router)
+app.include_router(zeek_lab.router)
 
 
 @app.get("/health")
@@ -35,40 +38,47 @@ def healthcheck():
     return {"status": "ok"}
 
 
-async def _synthetic_worker(generator: SyntheticAlertGenerator, rate: int, stop_event: asyncio.Event):
-    with SessionLocal() as session:
-        repo = AlertRepository(session)
-        service = AlertsService(repo, stream_manager)
-        await generator.start_live_emit(service, rate, stop_event)
-
-
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    if not hasattr(app.state, "zeek_datasets"):
+        app.state.zeek_datasets = {}
+    if not hasattr(app.state, "synthetic_generator"):
+        app.state.synthetic_generator = SyntheticAlertGenerator(seed=settings.synthetic_seed)
+    app.state.synthetic_rate = getattr(app.state, "synthetic_rate", settings.synthetic_rate_per_min)
     ingestion_mode = settings.ingestion_mode.upper()
-    generator = SyntheticAlertGenerator(seed=settings.synthetic_seed)
-    app.state.synthetic_generator = generator
     if ingestion_mode.startswith("SYNTHETIC"):
+        generator = app.state.synthetic_generator
         with SessionLocal() as session:
             repo = AlertRepository(session)
             service = AlertsService(repo, stream_manager)
             if repo.total() == 0:
                 generator.seed_initial(service, settings.synthetic_seed_count)
-        if settings.synthetic_rate_per_min > 0:
-            stop_event = asyncio.Event()
-            app.state.synthetic_stop_event = stop_event
-            app.state.synthetic_task = asyncio.create_task(
-                _synthetic_worker(generator, settings.synthetic_rate_per_min, stop_event)
+        if settings.synthetic_autostart and settings.synthetic_rate_per_min > 0:
+            await start_synthetic_emitter(
+                app,
+                stream_manager,
+                settings.synthetic_rate_per_min,
+                seed=settings.synthetic_seed,
             )
+    elif ingestion_mode == "ZEEK_CSV":
+        if not settings.zeek_conn_path:
+            raise RuntimeError("ZEEK_CSV requiere ZEEK_CONN_PATH configurado en .env")
+        model_adapter = get_model_adapter(settings.model_path)
+        zeek_adapter = ZeekAdapter(settings.zeek_conn_path, model_adapter)
+        limit = settings.zeek_seed_limit if settings.zeek_seed_limit > 0 else None
+        with SessionLocal() as session:
+            repo = AlertRepository(session)
+            service = AlertsService(repo, stream_manager)
+            created = zeek_adapter.seed_from_csv(service, limit)
+            app.state.zeek_ingested = created
+    elif ingestion_mode == "TEST_DISABLED":
+        # Usado por la suite de tests para evitar side-effects en la BD.
+        pass
+    else:
+        raise RuntimeError(f"Modo de ingesta no soportado: {ingestion_mode}")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    stop_event: asyncio.Event | None = getattr(app.state, "synthetic_stop_event", None)
-    task: asyncio.Task | None = getattr(app.state, "synthetic_task", None)
-    if stop_event:
-        stop_event.set()
-    if task:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+    await stop_synthetic_emitter(app)

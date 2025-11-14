@@ -78,6 +78,12 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
       ? (alert.meta?.playbook as string[])
       : PLAYBOOK_FALLBACK[alert.attack_type]) ?? PLAYBOOK_FALLBACK.Other;
 
+  const modelMeta = (alert.meta?.model as Record<string, unknown>) || {};
+  const probabilities = Object.entries((modelMeta as { probabilities?: Record<string, number> }).probabilities ?? {})
+    .sort(([, a], [, b]) => Number(b) - Number(a))
+    .slice(0, 5);
+  const zeekConn = (alert.meta?.zeek_conn as Record<string, string>) || null;
+
   const jsonString = useMemo(() => JSON.stringify(alert, null, 2), [alert]);
 
   return (
@@ -138,6 +144,48 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
               </p>
             </div>
           </section>
+
+          <section className="space-y-2 text-xs text-gray-200">
+            <h3 className="font-semibold text-white">Modelo CICIDS</h3>
+            <div className="flex items-baseline gap-3">
+              <span className="text-[28px] font-bold text-sky-300">{(alert.model_score * 100).toFixed(1)}%</span>
+              <span className="uppercase tracking-wide text-gray-400">{alert.model_label}</span>
+            </div>
+            {probabilities.length > 0 && (
+              <div className="space-y-1">
+                {probabilities.map(([label, value]) => (
+                  <div key={label} className="flex justify-between">
+                    <span>{label}</span>
+                    <span className="font-mono text-sky-200">{(Number(value) * 100).toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {zeekConn && (
+            <section className="space-y-1 text-xs text-gray-200">
+              <h3 className="font-semibold text-white">Campos Zeek</h3>
+              {[
+                ["Timestamp", zeekConn.ts],
+                ["UID", zeekConn.uid],
+                ["Proto", zeekConn.proto],
+                ["Servicio", zeekConn.service],
+                ["Estado", zeekConn.conn_state],
+                ["Bytes origen", zeekConn.orig_bytes],
+                ["Bytes destino", zeekConn.resp_bytes],
+                ["Packets origen", zeekConn.orig_pkts],
+                ["Packets destino", zeekConn.resp_pkts],
+              ].map(
+                ([label, value]) =>
+                  value && (
+                    <p key={label}>
+                      <span className="text-gray-400">{label}:</span> <span className="font-mono">{value}</span>
+                    </p>
+                  ),
+              )}
+            </section>
+          )}
 
           <section>
             <button

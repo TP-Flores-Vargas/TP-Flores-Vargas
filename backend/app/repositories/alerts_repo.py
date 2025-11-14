@@ -88,6 +88,16 @@ class AlertRepository:
             for severity, count in rows
         }
 
+    def counts_by_attack_type(self, since: datetime | None = None):
+        stmt = select(Alert.attack_type, func.count()).group_by(Alert.attack_type)
+        if since is not None:
+            stmt = stmt.where(Alert.timestamp >= since)
+        rows = self.session.exec(stmt).all()
+        return {
+            (attack.value if hasattr(attack, "value") else attack): count
+            for attack, count in rows
+        }
+
     def last24h_series(self):
         since = datetime.utcnow() - timedelta(hours=24)
         stmt = (
@@ -111,4 +121,12 @@ class AlertRepository:
         return series
 
     def total(self) -> int:
-        return self.session.exec(select(func.count()).select_from(Alert)).one()
+        stmt = select(func.count()).select_from(Alert)
+        return self.session.exec(stmt).scalar() or 0
+
+    def count_since(self, since: datetime) -> int:
+        stmt = select(func.count()).select_from(Alert).where(Alert.timestamp >= since)
+        return self.session.exec(stmt).scalar() or 0
+
+    def latest_timestamp(self) -> datetime | None:
+        return self.session.exec(select(func.max(Alert.timestamp)).select_from(Alert)).scalar()

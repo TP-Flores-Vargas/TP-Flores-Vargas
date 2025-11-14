@@ -67,6 +67,20 @@ export interface MetricsOverview {
   last24h_series: TimeSeriesBucket[];
 }
 
+export interface AttackDistributionEntry {
+  attack_type: string;
+  count: number;
+}
+
+export interface DashboardMetrics {
+  total_alerts: number;
+  alerts_today: number;
+  latest_alert_timestamp: string | null;
+  attack_distribution: AttackDistributionEntry[];
+  severity_last24h: SeverityCounts;
+  last24h_series: TimeSeriesBucket[];
+}
+
 export const fetchAlerts = async (filters: Partial<AlertFilters>) => {
   const params: Record<string, unknown> = {
     page: filters.page ?? 1,
@@ -101,6 +115,11 @@ export const fetchAlertById = async (id: string) => {
 
 export const fetchMetrics = async () => {
   const { data } = await apiClient.get<MetricsOverview>("/metrics/overview");
+  return data;
+};
+
+export const fetchDashboardMetrics = async () => {
+  const { data } = await apiClient.get<DashboardMetrics>("/metrics/dashboard");
   return data;
 };
 

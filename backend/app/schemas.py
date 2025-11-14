@@ -77,3 +77,17 @@ class TimeSeriesBucket(BaseModel):
 class MetricsOverview(BaseModel):
     counts_by_severity: SeverityCounts
     last24h_series: List[TimeSeriesBucket]
+
+
+class AttackDistributionEntry(BaseModel):
+    attack_type: str
+    count: int
+
+
+class DashboardMetrics(BaseModel):
+    total_alerts: int
+    alerts_today: int
+    latest_alert_timestamp: datetime | None
+    attack_distribution: List[AttackDistributionEntry]
+    severity_last24h: SeverityCounts
+    last24h_series: List[TimeSeriesBucket]

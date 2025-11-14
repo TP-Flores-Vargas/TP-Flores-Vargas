@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 
 import type { Alert, Severity } from "../api/alerts";
@@ -7,6 +8,8 @@ import AlertDetailModal from "../components/alerts/AlertDetailModal";
 import { AlertRow } from "../components/AlertRow";
 import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
+import { constants } from "../config/constants.js";
+import { useInterval } from "../hooks/useInterval.js";
 import { useAlertsStore } from "../store/alerts";
 
 type Props = {
@@ -55,6 +58,11 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
   useEffect(() => {
     refreshMetrics();
   }, []);
+
+  useInterval(() => {
+    loadAlerts();
+    refreshMetrics();
+  }, constants.REFRESH_INTERVAL_MS ?? 30 * 1000);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -120,7 +128,15 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
 
         <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl p-4">
           <p className="text-sm font-semibold text-gray-200 mb-2">Últimas 24h</p>
-          <TimeSeriesMini series={metrics?.last24h_series ?? []} />
+          <TimeSeriesMini
+            series={metrics?.last24h_series ?? []}
+            onSelectRange={({ from, to }) =>
+              setFilters({
+                from_ts: dayjs(from).format("YYYY-MM-DDTHH:mm"),
+                to_ts: dayjs(to).format("YYYY-MM-DDTHH:mm"),
+              })
+            }
+          />
         </div>
 
         <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl overflow-hidden">
@@ -144,7 +160,7 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
                   <th className="px-3 py-2">IPs</th>
                   <th className="px-3 py-2">Protocolo</th>
                   <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort("model_score")}>
-                    Score / Regla
+                    Regla Zeek / Score modelo
                   </th>
                   <th />
                 </tr>

@@ -16,8 +16,24 @@ class Settings(BaseSettings):
     synthetic_seed_count: int = 200
     synthetic_seed: int = 42
     synthetic_rate_per_min: int = 5
+    synthetic_autostart: bool = False
     replay_speed: float = 1.0
     stream_mode: str = "SSE"
+    model_path: str = "artifacts/CICIDS2017_multiclass_RF_ML.pkl"
+    zeek_conn_path: str | None = "data/default_csv/conn_latest.csv"
+    zeek_seed_limit: int = 500
+    zeek_upload_dir: str = "./tmp/zeek_uploads"
+    zeek_reference_dataset: str = "data/default_csv/attacks_reference.csv"
+    zeek_sync_script: str | None = "../sync_zeek_and_simulate.sh"
+    kali_ssh_host: str | None = None
+    kali_ssh_user: str | None = None
+    kali_ssh_port: int = 22
+    kali_ssh_key_path: str | None = None
+    kali_command_timeout: int = 30
+    kali_allow_local_fallback: bool = True
+    db_pool_size: int = 20
+    db_max_overflow: int = 40
+    db_pool_timeout: int = 30
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

@@ -77,6 +77,19 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
       ? (alert.meta?.playbook as string[])
       : PLAYBOOK_FALLBACK[alert.attack_type]) ?? PLAYBOOK_FALLBACK.Other;
 
+  const modelMeta = (alert.meta?.model as Record<string, unknown>) || {};
+  const probabilities = Object.entries((modelMeta as { probabilities?: Record<string, number> }).probabilities ?? {})
+    .sort(([, a], [, b]) => Number(b) - Number(a))
+    .slice(0, 6);
+  const zeekConn = (alert.meta?.zeek_conn as Record<string, string>) || null;
+  const featureMeta = (alert.meta?.features as Record<string, number>) || null;
+  const datasetLabel =
+    (typeof alert.meta?.dataset_label === "string" && alert.meta?.dataset_label) ||
+    (typeof alert.meta?.dataset_source === "string" && alert.meta?.dataset_source) ||
+    (typeof alert.meta?.source === "string" && alert.meta?.source) ||
+    null;
+  const datasetId = (typeof alert.meta?.dataset_id === "string" && alert.meta?.dataset_id) || null;
+
   const jsonString = useMemo(() => JSON.stringify(alert, null, 2), [alert]);
 
   const handleCopy = async () => {
@@ -107,6 +120,24 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
         <h3 className="text-sm font-semibold text-gray-300 mb-2">Resumen del incidente</h3>
         <p className="text-sm text-gray-400 leading-relaxed">{summary}</p>
       </section>
+
+      {datasetLabel && (
+        <section>
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">Fuente de datos</h3>
+          <div className="text-xs text-gray-300 space-y-1">
+            <div className="flex justify-between gap-4">
+              <span>Dataset</span>
+              <span className="font-semibold text-right">{datasetLabel}</span>
+            </div>
+            {datasetId && (
+              <div className="flex justify-between gap-4">
+                <span>ID</span>
+                <span className="font-mono text-right">{datasetId}</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section>
       <h3 className="text-sm font-semibold text-gray-300 mb-2">QUÉ HACER AHORA</h3>
@@ -142,6 +173,74 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
           </div>
         </div>
       </section>
+
+      <section>
+        <h3 className="text-sm font-semibold text-gray-300 mb-2">Modelo CICIDS</h3>
+        <div className="bg-slate-950/50 border border-slate-800 rounded-lg p-3 text-xs text-gray-200 space-y-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[32px] font-bold text-sky-300">{(alert.model_score * 100).toFixed(1)}%</span>
+            <span className="uppercase tracking-wide text-[11px] text-gray-400">{alert.model_label}</span>
+          </div>
+          {probabilities.length > 0 && (
+            <div>
+              <p className="text-[11px] uppercase text-gray-500 mb-1">Probabilidades por clase</p>
+              <div className="space-y-1">
+                {probabilities.map(([label, value]) => (
+                  <div key={label} className="flex justify-between">
+                    <span>{label}</span>
+                    <span className="font-mono text-sky-200">{(Number(value) * 100).toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {zeekConn && (
+        <section>
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">Datos Zeek del evento</h3>
+          <div className="text-xs text-gray-300 space-y-2">
+            {[
+              ["Timestamp", zeekConn.ts],
+              ["UID", zeekConn.uid],
+              ["Proto", zeekConn.proto],
+              ["Servicio", zeekConn.service],
+              ["Estado", zeekConn.conn_state],
+              ["History", zeekConn.history],
+              ["Bytes origen", zeekConn.orig_bytes],
+              ["Bytes destino", zeekConn.resp_bytes],
+              ["Packets origen", zeekConn.orig_pkts],
+              ["Packets destino", zeekConn.resp_pkts],
+            ].map(
+              ([label, value]) =>
+                value && (
+                  <div key={label} className="flex justify-between">
+                    <span className="text-gray-400">{label}</span>
+                    <span className="font-mono text-right">{value}</span>
+                  </div>
+                ),
+            )}
+          </div>
+        </section>
+      )}
+
+      {featureMeta && (
+        <section>
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">Características destacadas</h3>
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
+            {Object.entries(featureMeta)
+              .sort(([, a], [, b]) => Number(b) - Number(a))
+              .slice(0, 6)
+              .map(([name, value]) => (
+                <div key={name} className="bg-slate-950/40 border border-slate-800 rounded p-2">
+                  <p className="text-[11px] uppercase text-gray-500">{name}</p>
+                  <p className="font-mono text-sky-200">{Number(value).toFixed(2)}</p>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <button

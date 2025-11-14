@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -10,6 +10,7 @@ import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { constants } from "../config/constants.js";
 import { useInterval } from "../hooks/useInterval.js";
 import { defaultFilters, useAlertsStore } from "../store/alerts";
+import { fetchDashboardMetrics } from "../api/alerts";
 
 dayjs.extend(relativeTime);
 
@@ -67,6 +68,19 @@ const DashboardPage = ({ onNavigate }) => {
     setSelectedAlert,
   } = useAlertsStore();
   const [lastActivity, setLastActivity] = useState(dayjs());
+  const [dashboardMetrics, setDashboardMetrics] = useState(null);
+  const [dashboardError, setDashboardError] = useState(null);
+
+  const loadDashboardMetrics = useCallback(async () => {
+    try {
+      const data = await fetchDashboardMetrics();
+      setDashboardMetrics(data);
+      setDashboardError(null);
+    } catch (error) {
+      console.error("fetchDashboardMetrics failed", error);
+      setDashboardError("No se pudieron cargar las métricas globales.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!alerts.length) {
@@ -77,12 +91,27 @@ const DashboardPage = ({ onNavigate }) => {
     }
   }, [alerts.length, metrics, loadAlerts, refreshMetrics]);
 
-  useInterval(() => setLastActivity(dayjs()), constants.REFRESH_INTERVAL_MS ?? 30 * 1000);
+  useEffect(() => {
+    loadDashboardMetrics();
+  }, [loadDashboardMetrics]);
 
-  const alertsToday = useMemo(
-    () => alerts.filter((alert) => dayjs(alert.timestamp).isSame(dayjs(), "day")).length,
-    [alerts],
-  );
+  useInterval(() => {
+    loadAlerts();
+    refreshMetrics();
+    loadDashboardMetrics();
+    setLastActivity(dayjs());
+  }, constants.REFRESH_INTERVAL_MS ?? 30 * 1000);
+
+  const alertsToday = dashboardMetrics?.alerts_today ?? 0;
+  const totalAlerts = dashboardMetrics?.total_alerts ?? alerts.length;
+  const severitySnapshot =
+    dashboardMetrics?.severity_last24h ??
+    metrics?.counts_by_severity ??
+    null;
+  const last24hSeries = dashboardMetrics?.last24h_series ?? metrics?.last24h_series ?? [];
+  const latestAlertText = dashboardMetrics?.latest_alert_timestamp
+    ? dayjs(dashboardMetrics.latest_alert_timestamp).fromNow()
+    : "sin registros recientes";
 
   const applyFiltersAndNavigate = (partialFilters = {}) => {
     setFilters({ ...defaultFilters, ...partialFilters });
@@ -90,34 +119,36 @@ const DashboardPage = ({ onNavigate }) => {
   };
 
   const healthStatus = useMemo(() => {
-    const hasCritical = alerts.some(
-      (alert) =>
-        alert.severity === "Critical" && dayjs(alert.timestamp).isAfter(dayjs().subtract(30, "minute")),
-    );
-    const hasHigh = alerts.some(
-      (alert) => alert.severity === "High" && dayjs(alert.timestamp).isAfter(dayjs().subtract(1, "hour")),
-    );
-    if (hasCritical)
+    const helperSuffix = `Última alerta ${latestAlertText} · Refrescado ${lastActivity.format("HH:mm:ss")}`;
+    if (!severitySnapshot) {
+      return {
+        text: "Recolectando métricas…",
+        color: "bg-slate-700/70",
+        icon: CheckCircleIcon,
+        helper: helperSuffix,
+      };
+    }
+    if (severitySnapshot.Critical > 0)
       return {
         text: "Alerta Crítica",
         color: "bg-red-600/80",
         icon: XCircleIcon,
-        helper: "Se detectaron incidentes críticos en los últimos 30 min.",
+        helper: `${severitySnapshot.Critical} incidentes críticos / 24h · ${helperSuffix}`,
       };
-    if (hasHigh)
+    if (severitySnapshot.High > 0)
       return {
         text: "Actividad Sospechosa",
         color: "bg-yellow-600/80",
         icon: AlertTriangleIcon,
-        helper: "Hay actividad de alto riesgo en la última hora.",
+        helper: `${severitySnapshot.High} alertas de severidad alta / 24h · ${helperSuffix}`,
       };
     return {
       text: "Red Segura",
       color: "bg-green-600/80",
       icon: CheckCircleIcon,
-      helper: "Sin incidentes de severidad alta registrados recientemente.",
+      helper: `Sin incidentes graves en 24h · ${helperSuffix}`,
     };
-  }, [alerts]);
+  }, [severitySnapshot, latestAlertText, lastActivity]);
 
   const statusCauses = useMemo(() => {
     const windowStart = dayjs().subtract(2, "hour");
@@ -128,14 +159,15 @@ const DashboardPage = ({ onNavigate }) => {
   }, [alerts]);
 
   const attackDistribution = useMemo(() => {
-    const counts = alerts.reduce((acc, alert) => {
-      acc[alert.attack_type] = (acc[alert.attack_type] || 0) + 1;
-      return acc;
-    }, {});
-    const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a);
-    const max = sorted.length ? sorted[0][1] : 0;
+    if (!dashboardMetrics) {
+      return { sorted: [], max: 0 };
+    }
+    const sorted = dashboardMetrics.attack_distribution
+      .map((entry) => [entry.attack_type, entry.count])
+      .sort(([, a], [, b]) => b - a);
+    const max = sorted.length ? Math.max(...sorted.map(([, value]) => value)) : 0;
     return { sorted, max };
-  }, [alerts]);
+  }, [dashboardMetrics]);
 
   const recentAlerts = useMemo(
     () =>
@@ -156,9 +188,16 @@ const DashboardPage = ({ onNavigate }) => {
       ["Sección", "Clave", "Valor"],
       ["Resumen", "Generado", dayjs().format("YYYY-MM-DD HH:mm:ss")],
       ["Resumen", "Alertas Hoy", alertsToday],
-      ["Resumen", "Alertas Totales (muestra)", alerts.length],
+      ["Resumen", "Alertas Totales", totalAlerts],
+      [
+        "Resumen",
+        "Última alerta",
+        dashboardMetrics?.latest_alert_timestamp
+          ? dayjs(dashboardMetrics.latest_alert_timestamp).format("YYYY-MM-DD HH:mm:ss")
+          : "Sin registros",
+      ],
     ];
-    const severityCounts = metrics?.counts_by_severity ?? {};
+    const severityCounts = severitySnapshot ?? {};
     Object.entries(severityCounts).forEach(([severity, count]) => {
       rows.push(["Severidad", severity, count]);
     });
@@ -205,9 +244,14 @@ const DashboardPage = ({ onNavigate }) => {
           </svg>
         </button>
       </div>
+      {dashboardError && (
+        <p className="text-xs text-amber-400">
+          {dashboardError} · reintentaremos automáticamente en los próximos segundos.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <ServerStatusIndicator
-          status={{ ...healthStatus, helper: `${healthStatus.helper} Última actualización ${lastActivity.format("HH:mm:ss")}` }}
+          status={healthStatus}
           causes={statusCauses}
           onNavigateAlerts={(partial) => applyFiltersAndNavigate(partial)}
         />
@@ -223,8 +267,8 @@ const DashboardPage = ({ onNavigate }) => {
           }
         />
         <CardMetric
-          title="Alertas Totales (muestra)"
-          value={alerts.length}
+          title="Alertas Totales"
+          value={totalAlerts}
           description="Ver todas las alertas"
           onClick={() => applyFiltersAndNavigate({ ...defaultFilters })}
         />
@@ -232,7 +276,7 @@ const DashboardPage = ({ onNavigate }) => {
       </div>
 
       <StatsCards
-        counts={metrics?.counts_by_severity ?? null}
+        counts={severitySnapshot ?? null}
         onFilter={(severity) =>
           applyFiltersAndNavigate(severity ? { severity: [severity] } : { ...defaultFilters })
         }
@@ -244,7 +288,15 @@ const DashboardPage = ({ onNavigate }) => {
             <h2 className="text-lg font-semibold text-white">Actividad Últimas 24h</h2>
             <p className="text-xs text-gray-500 uppercase trackingwide">serie temporal</p>
           </div>
-          <TimeSeriesMini series={metrics?.last24h_series ?? []} />
+          <TimeSeriesMini
+            series={last24hSeries}
+            onSelectRange={({ from, to }) =>
+              applyFiltersAndNavigate({
+                from_ts: dayjs(from).format("YYYY-MM-DDTHH:mm"),
+                to_ts: dayjs(to).format("YYYY-MM-DDTHH:mm"),
+              })
+            }
+          />
         </Card>
         <Card>
           <h2 className="text-lg font-semibold text-white mb-4">Alertas Recientes</h2>

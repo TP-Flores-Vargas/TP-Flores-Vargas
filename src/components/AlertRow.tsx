@@ -34,8 +34,24 @@ export const AlertRow = ({ alert, onSelect, highlighted, rowIndex }: Props) => {
       </td>
       <td className="px-3 py-2 text-gray-300">{alert.protocol}</td>
       <td className="px-3 py-2 text-sm text-gray-200">
-        <div>{alert.rule_name}</div>
-        <div className="text-xs text-gray-400">{(alert.model_score * 100).toFixed(1)}% · {alert.model_label}</div>
+        <div className="text-[11px] uppercase text-gray-500">Regla Zeek</div>
+        <div className="font-semibold text-gray-100">{alert.rule_name}</div>
+        <div className="font-mono text-xs text-gray-400">{alert.rule_id}</div>
+        <div className="text-[11px] uppercase text-gray-500 mt-2">Modelo CICIDS</div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-bold text-sky-300">{(alert.model_score * 100).toFixed(1)}%</span>
+          <span className="text-xs text-gray-400">{alert.model_label}</span>
+        </div>
+        {(alert.meta?.dataset_label || alert.meta?.dataset_source || alert.meta?.source) && (
+          <div className="text-[11px] uppercase text-gray-500 mt-2">
+            Fuente:{" "}
+            <span className="text-gray-300">
+              {(alert.meta?.dataset_label as string) ||
+                (alert.meta?.dataset_source as string) ||
+                (alert.meta?.source as string)}
+            </span>
+          </div>
+        )}
       </td>
       <td className="px-3 py-2 text-right">
         <button
