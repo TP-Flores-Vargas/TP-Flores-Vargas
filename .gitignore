@@ -15,3 +15,5 @@ __pycache__/
 backend/artifacts/CICIDS2017_multiclass_RF_ML.pkl
 backend/data/default_csv/conn_*.csv
 backend/data/default_csv/conn_latest.csv
+backend/alerts.db
+.zeek_sync_state
