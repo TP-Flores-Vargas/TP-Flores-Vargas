@@ -65,7 +65,7 @@ class AlertRepository:
         order_by = SORT_MAP.get(filters.sort, SORT_MAP["-timestamp"])
         stmt = stmt.order_by(order_by)
         count_stmt = self._apply_filters(select(func.count()).select_from(Alert), filters)
-        total = self.session.exec(count_stmt).scalar()
+        total = self.session.exec(count_stmt).scalar() or 0
         offset = (filters.page - 1) * filters.page_size
         stmt = stmt.offset(offset).limit(filters.page_size)
         items = self.session.exec(stmt).scalars().all()
