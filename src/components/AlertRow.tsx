@@ -1,7 +1,7 @@
-import dayjs from "dayjs";
-
 import type { Alert } from "../api/alerts";
 import { SeverityBadge } from "./SeverityBadge";
+import { getConfidenceLabel, getDisplayConfidence, formatPercent } from "../utils/modelConfidence";
+import { formatLocalTimestamp, formatUtcTimestamp } from "../utils/time";
 
 interface Props {
   alert: Alert;
@@ -25,7 +25,8 @@ export const AlertRow = ({ alert, onSelect, highlighted, rowIndex }: Props) => {
         <SeverityBadge value={alert.severity} />
       </td>
       <td className="px-3 py-2 font-mono text-xs text-gray-300">
-        {dayjs(alert.timestamp).format("YYYY-MM-DD HH:mm:ss")}
+        <div>{formatLocalTimestamp(alert.timestamp)}</div>
+        <div className="text-[10px] text-gray-500">{formatUtcTimestamp(alert.timestamp)}</div>
       </td>
       <td className="px-3 py-2 font-semibold text-gray-100">{alert.attack_type}</td>
       <td className="px-3 py-2">
@@ -39,8 +40,10 @@ export const AlertRow = ({ alert, onSelect, highlighted, rowIndex }: Props) => {
         <div className="font-mono text-xs text-gray-400">{alert.rule_id}</div>
         <div className="text-[11px] uppercase text-gray-500 mt-2">Modelo CICIDS</div>
         <div className="flex items-baseline gap-2">
-          <span className="text-lg font-bold text-sky-300">{(alert.model_score * 100).toFixed(1)}%</span>
-          <span className="text-xs text-gray-400">{alert.model_label}</span>
+          <span className="text-lg font-bold text-sky-300">
+            {formatPercent(getDisplayConfidence(alert.model_score, alert.model_label))}
+          </span>
+          <span className="text-xs text-gray-400">{getConfidenceLabel(alert.model_label)}</span>
         </div>
         {(alert.meta?.dataset_label || alert.meta?.dataset_source || alert.meta?.source) && (
           <div className="text-[11px] uppercase text-gray-500 mt-2">

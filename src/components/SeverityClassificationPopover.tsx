@@ -2,6 +2,7 @@ import { Fragment } from "react";
 
 import { ContextPopover } from "./ContextPopover";
 import { attackSeverityMatrix, severityFramework } from "../content/contextualHelp";
+import { translateSeverity } from "../utils/severity";
 
 interface Props {
   className?: string;
@@ -26,7 +27,9 @@ export const SeverityClassificationPopover = ({ className = "" }: Props) => (
               <p className="text-xs font-semibold text-white">{entry.attack}</p>
               <p className="text-[11px] text-gray-400">{entry.rationale}</p>
             </div>
-            <span className="text-[11px] font-semibold text-sky-300">{entry.severity}</span>
+            <span className="text-[11px] font-semibold text-sky-300">
+              {translateSeverity(entry.severity)}
+            </span>
           </div>
         </Fragment>
       ))}

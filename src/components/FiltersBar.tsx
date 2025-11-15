@@ -1,6 +1,10 @@
 import { useState } from "react";
+import dayjs from "dayjs";
 
 import type { AttackType, Protocol, Severity } from "../api/alerts";
+import { translateSeverity } from "../utils/severity";
+import { HelpCircleIcon } from "../assets/icons/index.jsx";
+import { InfoTooltip } from "./InfoTooltip";
 
 interface Props {
   filters: {
@@ -58,6 +62,7 @@ export const FiltersBar = ({
     label: string,
     options: string[],
     key: "severity" | "attack_type" | "protocol",
+    formatter?: (value: string) => string,
   ) => (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between text-xs text-gray-400 uppercase tracking-wide">
@@ -79,14 +84,14 @@ export const FiltersBar = ({
             <button
               key={`${label}-${option}`}
               type="button"
-              className={`px-2 py-1 text-xs rounded-full border transition ${
+              className={`px-3 py-1.5 text-xs rounded-full border transition ${
                 active
-                  ? "bg-sky-500/20 border-sky-400 text-sky-100"
-                  : "border-gray-600 text-gray-400 hover:text-white"
+                  ? "bg-sky-600/30 border-sky-400 text-white"
+                  : "border-gray-700 text-gray-400 hover:text-white"
               }`}
               onClick={() => toggleValue(key, option)}
             >
-              {option}
+              {formatter ? formatter(option) : option}
             </button>
           );
         })}
@@ -131,7 +136,12 @@ export const FiltersBar = ({
         <div className="p-4 space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col text-xs text-gray-400 gap-1">
-              <label>Desde</label>
+              <label className="flex items-center gap-1 text-white">
+                Desde
+                <InfoTooltip content="Define la fecha/hora mínima para la consulta. Usa tu zona horaria.">
+                  <HelpCircleIcon className="w-4 h-4 text-gray-500" />
+                </InfoTooltip>
+              </label>
               <input
                 type="datetime-local"
                 className="bg-slate-800 border border-gray-700 rounded px-2 py-1 text-sm text-white"
@@ -140,7 +150,12 @@ export const FiltersBar = ({
               />
             </div>
             <div className="flex flex-col text-xs text-gray-400 gap-1">
-              <label>Hasta</label>
+              <label className="flex items-center gap-1 text-white">
+                Hasta
+                <InfoTooltip content="Define la fecha/hora máxima. Si la dejas vacía usaremos la hora actual.">
+                  <HelpCircleIcon className="w-4 h-4 text-gray-500" />
+                </InfoTooltip>
+              </label>
               <input
                 type="datetime-local"
                 className="bg-slate-800 border border-gray-700 rounded px-2 py-1 text-sm text-white"
@@ -149,7 +164,12 @@ export const FiltersBar = ({
               />
             </div>
             <div className="flex flex-col text-xs text-gray-400 gap-1 md:col-span-2">
-              <label>Búsqueda</label>
+              <label className="flex items-center gap-1 text-white">
+                Búsqueda
+                <InfoTooltip content="Busca por IP, regla Zeek, tipo de ataque o texto libre.">
+                  <HelpCircleIcon className="w-4 h-4 text-gray-500" />
+                </InfoTooltip>
+              </label>
               <input
                 type="search"
                 placeholder="IP, regla, ataque..."
@@ -161,7 +181,7 @@ export const FiltersBar = ({
             </div>
           </div>
 
-          {renderToggleGroup("Severidad", severityOptions, "severity")}
+          {renderToggleGroup("Severidad", severityOptions, "severity", (value) => translateSeverity(value as Severity))}
 
           <div className="grid gap-4 md:grid-cols-2">
             {renderToggleGroup("Tipo de ataque", attackOptions, "attack_type")}

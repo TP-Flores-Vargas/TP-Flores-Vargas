@@ -7,8 +7,8 @@ import { FiltersBar } from "../components/FiltersBar";
 import { AlertDrawer } from "../components/AlertDrawer";
 import AlertDetailModal from "../components/alerts/AlertDetailModal";
 import { AlertRow } from "../components/AlertRow";
+import { AlertsTableHelpPopover } from "../components/AlertsTableHelpPopover";
 import { SeverityClassificationPopover } from "../components/SeverityClassificationPopover";
-import { SeverityGuidanceCard } from "../components/SeverityGuidanceCard";
 import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { constants } from "../config/constants.js";
@@ -143,7 +143,6 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
               }
             }}
           />
-          <SeverityGuidanceCard compact />
         </div>
 
         <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl p-4">
@@ -164,7 +163,10 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
             <p className="text-sm text-gray-300">
               {loading ? "Cargando alertas..." : `${total} alertas filtradas`}
             </p>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            <div className="flex items-center gap-3">
+              <AlertsTableHelpPopover />
+              {error && <p className="text-sm text-red-400">{error}</p>}
+            </div>
           </div>
           <div className="flex gap-2 px-4 py-2 text-[11px] text-gray-500 border-b border-gray-800">
             <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />

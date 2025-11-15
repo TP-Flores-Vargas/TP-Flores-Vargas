@@ -1,8 +1,15 @@
-import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 
 import type { Alert, AttackType } from "../../api/alerts";
 import { SeverityBadge } from "../SeverityBadge";
+import {
+  formatPercent,
+  getBenignConfidence,
+  getConfidenceLabel,
+  getDisplayConfidence,
+  getRiskScore,
+} from "../../utils/modelConfidence";
+import { formatFullLocal, formatLocalTimestamp, formatUtcTimestamp } from "../../utils/time";
 
 const PLAYBOOK_FALLBACK: Record<AttackType, string[]> = {
   Benign: ["Registrar el evento para entrenamiento futuro.", "Verificar falsos positivos.", "No se requiere acción inmediata."],
@@ -102,7 +109,7 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
               {TITLE_MAP[alert.attack_type] || alert.attack_type}
             </h2>
             <p className="text-sm text-gray-400 mt-1">
-              {dayjs(alert.timestamp).format("dddd, D [de] MMMM YYYY, h:mm A")}
+              {formatFullLocal(alert.timestamp)} ({formatUtcTimestamp(alert.timestamp)})
             </p>
           </div>
           <SeverityBadge value={alert.severity} />
@@ -139,8 +146,18 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
                 <span className="text-gray-400">Regla:</span> {alert.rule_id} — {alert.rule_name}
               </p>
               <p>
-                <span className="text-gray-400">Modelo:</span>{" "}
-                {(alert.model_score * 100).toFixed(1)}% — {alert.model_label}
+                <span className="text-gray-400">Hora local:</span> {formatLocalTimestamp(alert.timestamp)}
+              </p>
+              <p>
+                <span className="text-gray-400">Hora UTC:</span> {formatUtcTimestamp(alert.timestamp)}
+              </p>
+              <p>
+                <span className="text-gray-400">{getConfidenceLabel(alert.model_label)}:</span>{" "}
+                {formatPercent(getDisplayConfidence(alert.model_score, alert.model_label))}
+              </p>
+              <p>
+                <span className="text-gray-400">Riesgo de ataque:</span>{" "}
+                {formatPercent(getRiskScore(alert.model_score))}
               </p>
             </div>
           </section>
@@ -148,9 +165,15 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
           <section className="space-y-2 text-xs text-gray-200">
             <h3 className="font-semibold text-white">Modelo CICIDS</h3>
             <div className="flex items-baseline gap-3">
-              <span className="text-[28px] font-bold text-sky-300">{(alert.model_score * 100).toFixed(1)}%</span>
-              <span className="uppercase tracking-wide text-gray-400">{alert.model_label}</span>
+              <span className="text-[28px] font-bold text-sky-300">
+                {formatPercent(getDisplayConfidence(alert.model_score, alert.model_label))}
+              </span>
+              <span className="uppercase tracking-wide text-gray-400">{getConfidenceLabel(alert.model_label)}</span>
             </div>
+            <p className="text-[11px] text-gray-400">
+              Riesgo de ataque: {formatPercent(getRiskScore(alert.model_score))} · Confianza en benigno:{" "}
+              {formatPercent(getBenignConfidence(alert.model_score))}
+            </p>
             {probabilities.length > 0 && (
               <div className="space-y-1">
                 {probabilities.map(([label, value]) => (

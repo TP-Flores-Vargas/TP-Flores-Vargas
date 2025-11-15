@@ -131,17 +131,30 @@ SEVERITY_WEIGHT = {
     SeverityEnum.critical: 3,
 }
 
+SEVERITY_POLICY = {
+    AttackTypeEnum.benign: SeverityEnum.low,
+    AttackTypeEnum.dos: SeverityEnum.medium,
+    AttackTypeEnum.other: SeverityEnum.medium,
+    AttackTypeEnum.ddos: SeverityEnum.critical,
+    AttackTypeEnum.infiltration: SeverityEnum.critical,
+    AttackTypeEnum.sqli: SeverityEnum.critical,
+    AttackTypeEnum.bot: SeverityEnum.critical,
+    AttackTypeEnum.bruteforce: SeverityEnum.high,
+    AttackTypeEnum.portscan: SeverityEnum.high,
+    AttackTypeEnum.xss: SeverityEnum.high,
+}
+
 SEVERITY_FLOOR = {
     AttackTypeEnum.benign: SeverityEnum.low,
-    AttackTypeEnum.portscan: SeverityEnum.medium,
-    AttackTypeEnum.dos: SeverityEnum.high,
-    AttackTypeEnum.ddos: SeverityEnum.high,
+    AttackTypeEnum.portscan: SeverityEnum.high,
+    AttackTypeEnum.dos: SeverityEnum.medium,
+    AttackTypeEnum.ddos: SeverityEnum.critical,
     AttackTypeEnum.bruteforce: SeverityEnum.high,
     AttackTypeEnum.xss: SeverityEnum.high,
-    AttackTypeEnum.sqli: SeverityEnum.high,
-    AttackTypeEnum.bot: SeverityEnum.high,
+    AttackTypeEnum.sqli: SeverityEnum.critical,
+    AttackTypeEnum.bot: SeverityEnum.critical,
     AttackTypeEnum.infiltration: SeverityEnum.critical,
-    AttackTypeEnum.other: SeverityEnum.high,
+    AttackTypeEnum.other: SeverityEnum.medium,
 }
 
 
@@ -161,18 +174,14 @@ class SyntheticAlertGenerator:
         return str(ipaddress.IPv4Address(self.random.randint(0x0A000000, 0x0AFFFFFF)))
 
     def _map_severity(self, score: float, attack_type: AttackTypeEnum) -> SeverityEnum:
-        if score >= 0.9 or attack_type in (AttackTypeEnum.infiltration, AttackTypeEnum.other):
+        policy = SEVERITY_POLICY.get(attack_type)
+        if policy:
+            return policy
+        if score >= 0.9:
             return SeverityEnum.critical
-        if score >= 0.75 or attack_type in (
-            AttackTypeEnum.dos,
-            AttackTypeEnum.ddos,
-            AttackTypeEnum.bruteforce,
-            AttackTypeEnum.bot,
-            AttackTypeEnum.xss,
-            AttackTypeEnum.sqli,
-        ):
+        if score >= 0.6:
             return SeverityEnum.high
-        if score >= 0.4:
+        if score >= 0.3:
             return SeverityEnum.medium
         return SeverityEnum.low
 

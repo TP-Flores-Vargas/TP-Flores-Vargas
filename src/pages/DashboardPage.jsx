@@ -2,20 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
-import { AlertTriangleIcon, CheckCircleIcon, DownloadIcon, XCircleIcon } from "../assets/icons/index.jsx";
+import { AlertTriangleIcon, CheckCircleIcon, DownloadIcon, HelpCircleIcon, XCircleIcon } from "../assets/icons/index.jsx";
 import Card from "../components/common/Card.jsx";
 import CardMetric from "../components/metrics/CardMetric.jsx";
 import { ModelPerformancePanel } from "../components/ModelPerformancePanel";
 import { SeverityClassificationPopover } from "../components/SeverityClassificationPopover";
-import { SeverityGuidanceCard } from "../components/SeverityGuidanceCard";
 import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { InfoTooltip } from "../components/InfoTooltip";
+import { translateSeverity } from "../utils/severity";
 import { constants } from "../config/constants.js";
 import { useInterval } from "../hooks/useInterval.js";
 import { defaultFilters, useAlertsStore } from "../store/alerts";
 import { fetchDashboardMetrics, fetchModelPerformanceMetrics } from "../api/alerts";
 import { dashboardHelp } from "../content/contextualHelp";
+import { SeverityBadge } from "../components/SeverityBadge";
+import { formatPercent, getConfidenceLabel, getDisplayConfidence } from "../utils/modelConfidence";
 
 dayjs.extend(relativeTime);
 
@@ -26,14 +28,25 @@ const severityRank = {
   Low: 1,
 };
 
-const ServerStatusIndicator = ({ status, causes, onNavigateAlerts, helperCopy }) => {
+const ServerStatusIndicator = ({ status, causes, onNavigateAlerts, helperCopy, onCauseClick }) => {
   const HealthIcon = status.icon;
-  const card = (
+  return (
     <Card className="relative overflow-hidden text-white border border-white/10">
       <div className={`absolute inset-0 ${status.color}`} aria-hidden />
-      <div className="relative flex items-center justify-between">
+      <div className="relative flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium opacity-80">Estado de la Red</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium opacity-80">Estado de la Red</p>
+            <InfoTooltip content={helperCopy} align="right">
+              <button
+                type="button"
+                className="rounded-full border border-white/20 bg-black/20 p-1 text-white/80 hover:text-white"
+                aria-label="Descripción del estado de la red"
+              >
+                <HelpCircleIcon className="w-4 h-4" aria-hidden />
+              </button>
+            </InfoTooltip>
+          </div>
           <p className="text-2xl font-bold">{status.text}</p>
           <p className="text-[11px] opacity-75 mt-1">{status.helper}</p>
         </div>
@@ -48,20 +61,28 @@ const ServerStatusIndicator = ({ status, causes, onNavigateAlerts, helperCopy })
               type="button"
               className="w-full text-left hover:underline"
               onClick={() =>
-                onNavigateAlerts({
-                  severity: [alert.severity],
-                  query: alert.rule_name,
-                })
+                {
+                  onCauseClick?.(alert);
+                  onNavigateAlerts({
+                    severity: [alert.severity],
+                    query: alert.rule_name,
+                  });
+                }
               }
             >
-              <span className="font-semibold">{alert.attack_type}</span> · {alert.rule_name}
+              <div className="flex flex-col text-sm text-white/90">
+                <span className="font-semibold">{alert.attack_type}</span>
+                <span className="text-xs text-gray-300">{alert.rule_name}</span>
+                <span className="text-[11px] text-gray-400">
+                  {translateSeverity(alert.severity)} · {dayjs(alert.timestamp).fromNow()}
+                </span>
+              </div>
             </button>
           ))}
         </div>
       )}
     </Card>
   );
-  return <InfoTooltip content={helperCopy}>{card}</InfoTooltip>;
 };
 
 const DashboardPage = ({ onNavigate }) => {
@@ -190,19 +211,7 @@ const DashboardPage = ({ onNavigate }) => {
     return { sorted, max };
   }, [dashboardMetrics]);
 
-  const recentAlerts = useMemo(
-    () =>
-      alerts
-        .slice(0, 5)
-        .map((alert) => ({
-          id: alert.id,
-          label: alert.attack_type,
-          severity: alert.severity,
-          timestamp: dayjs(alert.timestamp).fromNow(),
-          rule: alert.rule_name,
-        })),
-    [alerts],
-  );
+  const recentAlerts = useMemo(() => alerts.slice(0, 5), [alerts]);
 
   const handleDownloadSummary = () => {
     const rows = [
@@ -276,6 +285,10 @@ const DashboardPage = ({ onNavigate }) => {
           causes={statusCauses}
           onNavigateAlerts={(partial) => applyFiltersAndNavigate(partial)}
           helperCopy={dashboardHelp.serverStatus}
+          onCauseClick={(alert) => {
+            setSelectedAlert(alert);
+            applyFiltersAndNavigate({ query: alert.rule_name, severity: [alert.severity] });
+          }}
         />
         <CardMetric
           title="Alertas Hoy"
@@ -318,10 +331,9 @@ const DashboardPage = ({ onNavigate }) => {
             applyFiltersAndNavigate(severity ? { severity: [severity] } : { ...defaultFilters })
           }
         />
-        <SeverityGuidanceCard />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <Card className="xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Actividad Últimas 24h</h2>
@@ -344,19 +356,28 @@ const DashboardPage = ({ onNavigate }) => {
               <li key={alert.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between text-sm hover:text-white"
+                  className="flex w-full items-center justify-between text-sm hover:text-white rounded-xl border border-transparent hover:border-slate-600 px-2 py-2"
                   onClick={() => {
                     setSelectedAlert(alert);
-                    applyFiltersAndNavigate({ query: alert.rule_name });
+                    applyFiltersAndNavigate({ query: alert.rule_name, severity: [alert.severity] });
                   }}
                 >
-                  <div className="text-left">
-                    <p className="font-semibold text-white">{alert.label}</p>
-                    <p className="text-xs text-gray-400">Regla: {alert.rule}</p>
+                  <div className="flex flex-col text-left gap-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-white">{alert.attack_type}</p>
+                      <SeverityBadge value={alert.severity} />
+                    </div>
+                    <p className="text-xs text-gray-400">Regla: {alert.rule_name}</p>
+                    <p className="text-[11px] text-slate-400">
+                      {alert.src_ip}:{alert.src_port} → {alert.dst_ip}:{alert.dst_port}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs text-gray-500 block">{alert.timestamp}</span>
-                    <span className="text-xs uppercase tracking-wide text-gray-400">{alert.severity}</span>
+                    <span className="text-xs text-gray-500 block">{dayjs(alert.timestamp).fromNow()}</span>
+                    <p className="text-[11px] text-gray-300">
+                      {formatPercent(getDisplayConfidence(alert.model_score, alert.model_label))}{" "}
+                      {getConfidenceLabel(alert.model_label)}
+                    </p>
                   </div>
                 </button>
               </li>

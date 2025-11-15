@@ -81,7 +81,7 @@ chmod +x start.sh
 ### Métricas y ayuda contextual
 
 - **Desempeño del modelo**: el dashboard incluye el panel `ModelPerformancePanel` (consulta `/metrics/model-performance`) con tooltips que explican cada indicador (alertas modeladas, confianza media, latencia). Los valores provienen del backend (promedio, breakdown por dataset y tipo de ataque) y ya funcionan tanto con SQLite como con Postgres gracias a los casts de JSON.
-- **Marco de severidad**: Low/Medium/High/Critical se alinean ahora con el framework de NIST SP 800-61 + los rangos CVSS v3.1 (CVSS <4, 4-6.9, 7-8.9, ≥9). Toda tarjeta o badge de severidad muestra en hover por qué cae en ese nivel y ejemplos de ataques (DDoS, BruteForce, etc.). El componente `SeverityGuidanceCard` aparece en Dashboard, Alertas y Reportes.
+- **Marco de severidad**: Low/Medium/High/Critical se alinean ahora con el framework de NIST SP 800-61 + los rangos CVSS v3.1 (CVSS <4, 4-6.9, 7-8.9, ≥9). Toda tarjeta o badge de severidad muestra en hover por qué cae en ese nivel y ejemplos de ataques (DDoS, BruteForce, etc.), y el popover “¿Cómo clasifica el modelo?” expone el criterio usado para cada tipo de ataque.
 - **Ayuda contextual**: Dashboard, Alertas, Reportes y la vista de Pruebas/Zeek incorporan tooltips accesibles (`HelpCircleIcon`) que describen cada métrica, filtro y flujo (p. ej. cómo usar el dataset sincronizado o qué representa “Alertas Hoy”). Esto reduce la carga cognitiva en demos o cuando se incorpora un nuevo analista. Además, hay popovers (“¿Cómo clasifica el modelo?”) que muestran el criterio exacto que sigue el modelo para mapear cada tipo de ataque (PortScan, SQLi, Bot, etc.) a una severidad concreta.
 
 ---

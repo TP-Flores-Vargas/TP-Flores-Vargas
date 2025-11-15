@@ -1,6 +1,8 @@
 import type { DatasetBreakdownEntry, ModelPerformanceMetrics } from "../api/alerts";
 import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import { InfoTooltip } from "./InfoTooltip";
+import { ContextPopover } from "./ContextPopover";
+import { formatPercent } from "../utils/modelConfidence";
 
 interface InfoMetricProps {
   label: string;
@@ -10,7 +12,7 @@ interface InfoMetricProps {
 
 const InfoMetric = ({ label, value, helper }: InfoMetricProps) => (
   <div className="rounded-2xl bg-slate-900/70 border border-white/5 p-4">
-    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-400">
+    <div className="flex items-center justify-between text-xs font-semibold text-gray-400">
       <span>{label}</span>
       <InfoTooltip content={helper}>
         <button
@@ -50,7 +52,7 @@ export const ModelPerformancePanel = ({ data, error }: Props) => {
     );
   }
 
-  const formattedScore = `${(data.avg_model_score * 100).toFixed(1)}%`;
+  const formattedRisk = formatPercent(data.avg_model_score);
   const formattedLatency =
     data.avg_latency_ms > 1000
       ? `${(data.avg_latency_ms / 1000).toFixed(2)} s`
@@ -61,7 +63,38 @@ export const ModelPerformancePanel = ({ data, error }: Props) => {
     <section className="mt-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-white">Desempeño del modelo</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Desempeño del modelo</h2>
+            <ContextPopover
+              triggerLabel="¿Qué mide este panel?"
+              title="Cómo leer el desempeño del modelo"
+              description="Resumen de lo que monitoreamos al evaluar el modelo CICIDS en producción."
+            >
+              <p>
+                Este panel resume cuántas alertas procesó el modelo, qué tan confiado estuvo (score promedio) y
+                cuánto tarda en escribir cada evento en la base. También desglosa los tipos de ataque y el origen de
+                los datasets.
+              </p>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-sm font-semibold text-white">Métricas principales</p>
+                <ul className="list-disc pl-4 text-xs text-gray-300 space-y-1">
+                  <li>
+                    <strong>Alertas modeladas:</strong> volumen total analizado en la ventana seleccionada.
+                  </li>
+                  <li>
+                    <strong>Confianza media:</strong> promedio del score del modelo (0% benigno – 100% ataque).
+                  </li>
+                  <li>
+                    <strong>Latencia promedio:</strong> tiempo entre el evento en Zeek y la inserción de la alerta.
+                  </li>
+                </ul>
+              </div>
+              <p className="text-xs text-gray-400">
+                Usa esta información para validar que el modelo mantiene tiempos y calidades esperados según el
+                dataset activo.
+              </p>
+            </ContextPopover>
+          </div>
           <p className="text-sm text-gray-400">
             Ventana analizada: últimas {data.window_hours} h · {data.total_alerts} alertas
           </p>
@@ -75,17 +108,17 @@ export const ModelPerformancePanel = ({ data, error }: Props) => {
         <InfoMetric
           label="Alertas modeladas"
           value={data.total_alerts.toLocaleString()}
-          helper="Cantidad de alertas procesadas por el modelo durante la ventana seleccionada."
+          helper="Total de alertas que el modelo analizó en esta ventana."
         />
         <InfoMetric
-          label="Confianza media"
-          value={formattedScore}
-          helper="Promedio del puntaje del modelo (probabilidad de ataque) en la ventana."
+          label="Riesgo medio"
+          value={formattedRisk}
+          helper="Probabilidad promedio de ataque calculada por el modelo (0 % = sin señales, 100 % = ataque confirmado)."
         />
         <InfoMetric
           label="Latencia promedio"
           value={formattedLatency}
-          helper="Tiempo promedio entre el evento detectado por Zeek y la inserción de la alerta."
+          helper="Tiempo promedio entre el momento en que Zeek detectó el evento y la creación de la alerta."
         />
       </div>
 
@@ -109,9 +142,9 @@ export const ModelPerformancePanel = ({ data, error }: Props) => {
               <div key={entry.attack_type} className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-white font-medium">{entry.attack_type}</p>
-                  <p className="text-xs text-gray-500">
-                    {(entry.avg_model_score * 100).toFixed(1)}% confianza media
-                  </p>
+              <p className="text-xs text-gray-500">
+                {formatPercent(entry.avg_model_score)} riesgo medio
+              </p>
                 </div>
                 <span className="text-sm text-gray-200 font-semibold">
                   {entry.count.toLocaleString()} alertas

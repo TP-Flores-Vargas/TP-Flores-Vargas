@@ -1,8 +1,15 @@
-import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 
 import type { Alert, AttackType } from "../api/alerts";
 import { SeverityBadge } from "./SeverityBadge";
+import {
+  formatPercent,
+  getBenignConfidence,
+  getConfidenceLabel,
+  getDisplayConfidence,
+  getRiskScore,
+} from "../utils/modelConfidence";
+import { formatFullLocal, formatLocalTimestamp, formatUtcTimestamp } from "../utils/time";
 
 const PLAYBOOK_FALLBACK: Record<AttackType, string[]> = {
   Benign: ["Registrar el evento para entrenamiento futuro.", "Verificar falsos positivos.", "No se requiere acción inmediata."],
@@ -110,7 +117,7 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
           <p className="text-xs uppercase tracking-wide text-gray-400">Alerta</p>
           <h2 className="text-2xl font-bold text-white">{TITLE_MAP[alert.attack_type] || alert.attack_type}</h2>
           <p className="text-sm text-gray-400 mt-1">
-            {dayjs(alert.timestamp).format("dddd, D [de] MMMM YYYY, h:mm A")}
+            {formatFullLocal(alert.timestamp)} ({formatUtcTimestamp(alert.timestamp)})
           </p>
         </div>
         <SeverityBadge value={alert.severity} />
@@ -160,6 +167,14 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
             <span className="font-mono">{alert.dst_ip}:{alert.dst_port}</span>
           </div>
           <div className="flex justify-between gap-4">
+            <span>Hora local</span>
+            <span className="font-mono">{formatLocalTimestamp(alert.timestamp)}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>Hora UTC</span>
+            <span className="font-mono">{formatUtcTimestamp(alert.timestamp)}</span>
+          </div>
+          <div className="flex justify-between gap-4">
             <span>Protocolo</span>
             <span>{alert.protocol}</span>
           </div>
@@ -168,8 +183,12 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
             <span>{alert.rule_id} — {alert.rule_name}</span>
           </div>
           <div className="flex justify-between gap-4">
-            <span>Modelo</span>
-            <span>{(alert.model_score * 100).toFixed(1)}% — {alert.model_label}</span>
+            <span>{getConfidenceLabel(alert.model_label)}</span>
+            <span>{formatPercent(getDisplayConfidence(alert.model_score, alert.model_label))}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>Riesgo de ataque</span>
+            <span>{formatPercent(getRiskScore(alert.model_score))}</span>
           </div>
         </div>
       </section>
@@ -178,9 +197,17 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
         <h3 className="text-sm font-semibold text-gray-300 mb-2">Modelo CICIDS</h3>
         <div className="bg-slate-950/50 border border-slate-800 rounded-lg p-3 text-xs text-gray-200 space-y-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-[32px] font-bold text-sky-300">{(alert.model_score * 100).toFixed(1)}%</span>
-            <span className="uppercase tracking-wide text-[11px] text-gray-400">{alert.model_label}</span>
+            <span className="text-[32px] font-bold text-sky-300">
+              {formatPercent(getDisplayConfidence(alert.model_score, alert.model_label))}
+            </span>
+            <span className="uppercase tracking-wide text-[11px] text-gray-400">
+              {getConfidenceLabel(alert.model_label)}
+            </span>
           </div>
+          <p className="text-[11px] text-gray-400">
+            Riesgo de ataque: {formatPercent(getRiskScore(alert.model_score))} · Confianza en benigno:{" "}
+            {formatPercent(getBenignConfidence(alert.model_score))}
+          </p>
           {probabilities.length > 0 && (
             <div>
               <p className="text-[11px] uppercase text-gray-500 mb-1">Probabilidades por clase</p>

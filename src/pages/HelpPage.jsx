@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-import { ChevronDownIcon } from '../assets/icons/index.jsx';
-import Card from '../components/common/Card.jsx';
-import { faqItems, glossary } from '../data/helpContent.js';
+import { ChevronDownIcon } from "../assets/icons/index.jsx";
+import Card from "../components/common/Card.jsx";
+import { faqItems, glossary } from "../data/helpContent.ts";
 
 const AccordionItem = ({ title, children }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +15,7 @@ const AccordionItem = ({ title, children }) => {
         className="w-full text-left flex justify-between items-center py-4 px-2 hover:bg-gray-700/50"
       >
         <span className="font-semibold">{title}</span>
-        <ChevronDownIcon className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon className={`w-5 h-5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && <div className="p-4 bg-gray-900/50 text-gray-300 whitespace-pre-line">{children}</div>}
     </div>
@@ -23,25 +23,34 @@ const AccordionItem = ({ title, children }) => {
 };
 
 const HelpPage = () => (
-  <div className="p-8 text-white max-w-4xl mx-auto">
-    <h1 className="text-3xl font-bold mb-2">Ayuda y Glosario</h1>
-    <p className="text-gray-400 mb-8">
-      Encuentre respuestas a preguntas frecuentes y aprenda sobre los tipos de amenazas.
-    </p>
+  <div className="p-8 text-white max-w-4xl mx-auto space-y-8">
+    <div>
+      <h1 className="text-3xl font-bold mb-2">Ayuda y Glosario</h1>
+      <p className="text-gray-400">
+        Reúne definiciones de amenazas que detecta el modelo, guías rápidas y preguntas frecuentes para sacarle el máximo al IDS.
+      </p>
+    </div>
 
     <Card>
-      <h2 className="text-xl font-semibold mb-4">Glosario de Amenazas</h2>
+      <h2 className="text-xl font-semibold mb-4">Glosario de amenazas</h2>
       <div className="space-y-2">
-        {Object.entries(glossary).map(([term, definition]) => (
-          <AccordionItem key={term} title={term}>
-            <p>{definition}</p>
+        {glossary.map((item) => (
+          <AccordionItem key={item.term} title={item.term}>
+            <p className="text-gray-200">{item.description}</p>
+            {item.actions && (
+              <ul className="mt-2 list-disc pl-5 text-xs text-gray-400 space-y-1">
+                {item.actions.map((action) => (
+                  <li key={action}>{action}</li>
+                ))}
+              </ul>
+            )}
           </AccordionItem>
         ))}
       </div>
     </Card>
 
-    <Card className="mt-8">
-      <h2 className="text-xl font-semibold mb-4">Preguntas Frecuentes</h2>
+    <Card>
+      <h2 className="text-xl font-semibold mb-4">Preguntas frecuentes</h2>
       <div className="space-y-2">
         {faqItems.map((faq) => (
           <AccordionItem key={faq.question} title={faq.question}>

@@ -42,6 +42,9 @@ export interface AlertsState {
   setSelectedAlert: (alert: Alert | null) => void;
   toggleLive: () => void;
   exportCsv: () => Promise<Blob>;
+  reportRanges: Record<string, Alert[]>;
+  setReportRangeData: (key: string, alerts: Alert[]) => void;
+  clearReportRanges: () => void;
 }
 
 export const defaultFilters = {
@@ -67,6 +70,7 @@ export const useAlertsStore = create<AlertsState>((set, get) => ({
   liveEnabled: false,
   highlights: {},
   error: null,
+  reportRanges: {},
   setFilters: (partial) => {
     set((state) => ({
       filters: { ...state.filters, ...partial },
@@ -170,4 +174,12 @@ export const useAlertsStore = create<AlertsState>((set, get) => ({
     };
     return exportAlertsCsv(payload);
   },
+  setReportRangeData: (key, alerts) =>
+    set((state) => ({
+      reportRanges: {
+        ...state.reportRanges,
+        [key]: alerts,
+      },
+    })),
+  clearReportRanges: () => set({ reportRanges: {} }),
 }));

@@ -1,5 +1,6 @@
 import type { Severity } from "../api/alerts";
 import { getSeverityTooltip } from "../content/contextualHelp";
+import { translateSeverity } from "../utils/severity";
 import { InfoTooltip } from "./InfoTooltip";
 
 const palette: Record<Severity, string> = {
@@ -16,7 +17,7 @@ interface Props {
 export const SeverityBadge = ({ value }: Props) => {
   const badge = (
     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${palette[value]}`}>
-      {value}
+      {translateSeverity(value)}
     </span>
   );
   return <InfoTooltip content={getSeverityTooltip(value)}>{badge}</InfoTooltip>;

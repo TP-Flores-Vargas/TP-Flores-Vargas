@@ -4,6 +4,8 @@ import {
   ReactElement,
   ReactNode,
   useId,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -16,7 +18,10 @@ interface Props {
 
 export const InfoTooltip = ({ content, children, align = "center", className = "" }: Props) => {
   const [open, setOpen] = useState(false);
+  const [shift, setShift] = useState(0);
   const tooltipId = useId();
+  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const handleShow = () => setOpen(true);
   const handleHide = () => setOpen(false);
@@ -43,21 +48,43 @@ export const InfoTooltip = ({ content, children, align = "center", className = "
       })
     : children;
 
-  const alignment =
-    {
-      left: "left-0",
-      center: "left-1/2 -translate-x-1/2",
-      right: "right-0",
-    }[align] ?? "left-1/2 -translate-x-1/2";
+  const alignment = {
+    left: { left: "0%", translate: "0%" },
+    center: { left: "50%", translate: "-50%" },
+    right: { left: "100%", translate: "-100%" },
+  }[align] ?? { left: "50%", translate: "-50%" };
+
+  useLayoutEffect(() => {
+    if (!open || !tooltipRef.current) {
+      setShift(0);
+      return;
+    }
+    const rect = tooltipRef.current.getBoundingClientRect();
+    const padding = 12;
+    let delta = 0;
+    if (rect.left < padding) {
+      delta = padding - rect.left;
+    } else if (rect.right > window.innerWidth - padding) {
+      delta = window.innerWidth - padding - rect.right;
+    }
+    setShift(delta);
+  }, [open, align]);
 
   return (
-    <span className={`relative inline-flex ${className}`}>
+    <span className={`relative inline-flex ${className}`} ref={wrapperRef}>
       {clonedChild}
       {open && (
         <span
           role="tooltip"
           id={tooltipId}
-          className={`absolute z-30 mt-2 px-3 py-2 rounded-xl bg-black/90 text-xs text-white shadow-xl whitespace-pre-line ${alignment}`}
+          onMouseEnter={handleShow}
+          onMouseLeave={handleHide}
+          ref={tooltipRef}
+          style={{
+            left: alignment.left,
+            transform: `translateX(calc(${alignment.translate} + ${shift}px))`,
+          }}
+          className="pointer-events-auto absolute z-30 mt-2 w-64 max-w-xs rounded-2xl border border-white/10 bg-black/90 px-4 py-3 text-left text-[13px] leading-snug text-white shadow-2xl"
         >
           {content}
         </span>

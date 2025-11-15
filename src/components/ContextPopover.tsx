@@ -1,10 +1,10 @@
 import {
   ReactNode,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
   triggerLabel: string;
@@ -22,56 +22,63 @@ export const ContextPopover = ({
   className = "",
 }: Props) => {
   const [open, setOpen] = useState(false);
-  const popoverId = useId();
-  const ref = useRef<HTMLDivElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   const toggle = () => setOpen((prev) => !prev);
   const close = () => setOpen(false);
 
   useEffect(() => {
     if (!open) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        close();
-      }
-    };
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        close();
-      }
+      if (event.key === "Escape") close();
     };
-    document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [open]);
 
   return (
-    <div className={`relative inline-flex ${className}`} ref={ref}>
+    <div className={`inline-flex ${className}`}>
       <button
         type="button"
         className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-slate-900/60 px-3 py-1.5 text-xs font-semibold text-sky-200 hover:text-white"
         aria-expanded={open}
-        aria-controls={popoverId}
         onClick={toggle}
       >
         {triggerLabel}
       </button>
-      {open && (
-        <div
-          role="dialog"
-          id={popoverId}
-          className="absolute z-40 mt-2 w-80 rounded-2xl border border-white/5 bg-slate-900/95 p-4 text-sm text-gray-200 shadow-2xl backdrop-blur"
-        >
-          <div className="mb-2">
-            <p className="text-sm font-semibold text-white">{title}</p>
-            {description && <p className="text-xs text-gray-400">{description}</p>}
-          </div>
-          <div className="space-y-2 text-xs text-gray-200">{children}</div>
-        </div>
-      )}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div
+              className="absolute inset-0"
+              aria-hidden
+              onClick={close}
+            />
+            <div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              className="relative z-10 w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900/95 p-6 text-sm text-gray-200 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div>
+                  <p className="text-base font-semibold text-white">{title}</p>
+                  {description && <p className="text-xs text-gray-400 mt-1">{description}</p>}
+                </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-gray-400 hover:text-white"
+                  onClick={close}
+                >
+                  Cerrar
+                </button>
+              </div>
+              <div className="space-y-3 text-xs text-gray-200">{children}</div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 
 import { fetchAlerts } from "../api/alerts";
@@ -6,11 +6,13 @@ import Card from "../components/common/Card.jsx";
 import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import { SeverityBadge } from "../components/SeverityBadge";
 import { SeverityClassificationPopover } from "../components/SeverityClassificationPopover";
-import { SeverityGuidanceCard } from "../components/SeverityGuidanceCard";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { InfoTooltip } from "../components/InfoTooltip";
+import { ContextPopover } from "../components/ContextPopover";
 import { useAlertsStore } from "../store/alerts";
 import { reportsHelp } from "../content/contextualHelp";
+import { formatPercent, getDisplayConfidence, getConfidenceLabel } from "../utils/modelConfidence";
+import { translateSeverity } from "../utils/severity";
 
 const RANGE_OPTIONS = {
   "24h": { label: "Últimas 24h", hours: 24 },
@@ -28,11 +30,15 @@ const SectionTitle = ({ title, description }) => (
 );
 
 const ReportsPage = () => {
-  const { metrics, refreshMetrics, exportCsv } = useAlertsStore();
+  const metrics = useAlertsStore((state) => state.metrics);
+  const refreshMetrics = useAlertsStore((state) => state.refreshMetrics);
+  const exportCsv = useAlertsStore((state) => state.exportCsv);
+  const reportRanges = useAlertsStore((state) => state.reportRanges);
+  const setReportRangeData = useAlertsStore((state) => state.setReportRangeData);
   const [rangeKey, setRangeKey] = useState("24h");
   const [downloading, setDownloading] = useState(false);
   const [summaryDownloading, setSummaryDownloading] = useState(false);
-  const [reportAlerts, setReportAlerts] = useState([]);
+  const [reportAlerts, setReportAlerts] = useState(reportRanges["24h"] ?? []);
   const [reportLoading, setReportLoading] = useState(false);
   const [rangeError, setRangeError] = useState(null);
 
@@ -43,40 +49,58 @@ const ReportsPage = () => {
   }, [metrics, refreshMetrics]);
 
   const selectedRange = RANGE_OPTIONS[rangeKey];
-  const rangeStart = dayjs().subtract(selectedRange.hours, "hour");
-
-  const loadRangeAlerts = useCallback(async () => {
-    setReportLoading(true);
-    setRangeError(null);
-    try {
-      const aggregated = [];
-      const pageSize = 400;
-      let page = 1;
-      while (page <= 5) {
-        const data = await fetchAlerts({
-          page,
-          page_size: pageSize,
-          sort: "-timestamp",
-          from_ts: rangeStart.toISOString(),
-        });
-        aggregated.push(...data.items);
-        if (data.items.length < pageSize) {
-          break;
-        }
-        page += 1;
-      }
-      setReportAlerts(aggregated);
-    } catch (error) {
-      console.error("No se pudo cargar el rango", error);
-      setRangeError("No se pudo cargar el periodo seleccionado.");
-    } finally {
-      setReportLoading(false);
-    }
-  }, [rangeStart]);
 
   useEffect(() => {
-    loadRangeAlerts();
-  }, [loadRangeAlerts]);
+    if (reportRanges[rangeKey]) {
+      setReportAlerts(reportRanges[rangeKey]);
+    }
+  }, [rangeKey, reportRanges]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRangeAlerts = async () => {
+      const rangeStart = dayjs().subtract(selectedRange.hours, "hour");
+      setReportLoading(true);
+      setRangeError(null);
+      try {
+        const aggregated = [];
+        const pageSize = 400;
+        let page = 1;
+        while (page <= 5) {
+          const data = await fetchAlerts({
+            page,
+            page_size: pageSize,
+            sort: "-timestamp",
+            from_ts: rangeStart.toISOString(),
+          });
+          aggregated.push(...data.items);
+          if (data.items.length < pageSize) {
+            break;
+          }
+          page += 1;
+        }
+        if (!cancelled) {
+          setReportAlerts(aggregated);
+          setReportRangeData(rangeKey, aggregated);
+        }
+      } catch (error) {
+        console.error("No se pudo cargar el rango", error);
+        if (!cancelled) {
+          setRangeError("No se pudo cargar el periodo seleccionado.");
+        }
+      } finally {
+        if (!cancelled) {
+          setReportLoading(false);
+        }
+      }
+    };
+
+    fetchRangeAlerts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rangeKey, selectedRange.hours, setReportRangeData]);
 
   const rangeAlerts = reportAlerts;
 
@@ -111,7 +135,7 @@ const ReportsPage = () => {
       .slice(0, 5);
   }, [rangeAlerts]);
 
-  const averageScore = useMemo(() => {
+  const averageRisk = useMemo(() => {
     if (!rangeAlerts.length) return 0;
     return rangeAlerts.reduce((sum, alert) => sum + alert.model_score, 0) / rangeAlerts.length;
   }, [rangeAlerts]);
@@ -161,7 +185,7 @@ const ReportsPage = () => {
         ["Resumen", "Generado", dayjs().format("YYYY-MM-DD HH:mm:ss")],
         ["Resumen", "Rango", selectedRange.label],
         ["Resumen", "Alertas", rangeAlerts.length],
-        ["Resumen", "Score Promedio", averageScore.toFixed(2)],
+        ["Resumen", "Riesgo promedio", formatPercent(averageRisk)],
         ["Resumen", "% Maliciosas", `${maliciousRatio}%`],
         ["Resumen", "IPs Únicas", uniqueSources],
       ];
@@ -234,19 +258,44 @@ const ReportsPage = () => {
             {value.label}
           </button>
         ))}
-        {reportLoading && <span className="text-xs text-gray-400">Actualizando rango...</span>}
+        {reportLoading && (
+          <span className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="h-2 w-2 animate-ping rounded-full bg-sky-400" /> Cargando rango…
+          </span>
+        )}
         {rangeError && <span className="text-xs text-red-400">{rangeError}</span>}
+        <ContextPopover
+          triggerLabel="¿Cómo se calculan?"
+          title="Rangos disponibles"
+          description="Cada botón aplica una ventana relativa hacia atrás desde ahora."
+        >
+          <p>24h: últimas 24 horas. 7d: acumulado de la última semana. 30d: último mes.</p>
+          <p className="text-xs text-gray-400">
+            Puedes combinarlo con filtros manuales (fechas en el panel de Alertas) si necesitas un rango específico.
+          </p>
+        </ContextPopover>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
-          <p className="text-sm text-gray-400">Alertas en el periodo</p>
+          <div className="flex items-center justify-between text-sm text-gray-400">
+            <span>Alertas en el periodo</span>
+            <InfoTooltip content="Cantidad de alertas registradas dentro del rango seleccionado.">
+              <HelpCircleIcon className="w-4 h-4 text-gray-500" />
+            </InfoTooltip>
+          </div>
           <p className="text-3xl font-bold text-white mt-1">{formatNumber(rangeAlerts.length)}</p>
           <p className="text-xs text-gray-500 mt-1">{selectedRange.label}</p>
         </Card>
         <Card>
-          <p className="text-sm text-gray-400">Promedio de score</p>
-          <p className="text-3xl font-bold text-white mt-1">{averageScore.toFixed(2)}</p>
+          <div className="flex items-center justify-between text-sm text-gray-400">
+            <span>Riesgo medio</span>
+            <InfoTooltip content="Promedio del score del modelo (0% benigno, 100% ataque confirmado).">
+              <HelpCircleIcon className="w-4 h-4 text-gray-500" />
+            </InfoTooltip>
+          </div>
+          <p className="text-3xl font-bold text-white mt-1">{formatPercent(averageRisk)}</p>
+          <p className="text-[11px] text-gray-500 mt-1">0% benigno · 100% ataque</p>
         </Card>
         <Card>
           <p className="text-sm text-gray-400">% maliciosas</p>
@@ -258,7 +307,6 @@ const ReportsPage = () => {
         </Card>
       </div>
 
-      <SeverityGuidanceCard compact />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>
@@ -270,7 +318,7 @@ const ReportsPage = () => {
               return (
                 <div key={level}>
                   <div className="flex justify-between text-sm text-gray-300">
-                    <span>{level}</span>
+                    <span>{translateSeverity(level)}</span>
                     <span className="font-semibold text-white">{count}</span>
                   </div>
                   <div className="mt-1 h-2 rounded-full bg-gray-700">
@@ -331,7 +379,7 @@ const ReportsPage = () => {
                 <th className="py-2 pr-4 font-medium">Severidad</th>
                 <th className="py-2 pr-4 font-medium">Ataque</th>
                 <th className="py-2 pr-4 font-medium">Regla</th>
-                <th className="py-2 font-medium">Score</th>
+                <th className="py-2 font-medium">Confianza del modelo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800 text-gray-200">
@@ -347,7 +395,12 @@ const ReportsPage = () => {
                     </span>
                   </td>
                   <td className="py-3 pr-4 truncate max-w-xs">{row.rule}</td>
-                  <td className="py-3 font-semibold">{row.model_score.toFixed(2)}</td>
+                  <td className="py-3 font-semibold">
+                    {formatPercent(getDisplayConfidence(row.model_score, row.model_label))}{" "}
+                    <span className="text-[11px] text-gray-400">
+                      ({getConfidenceLabel(row.model_label)})
+                    </span>
+                  </td>
                 </tr>
               ))}
               {!tableRows.length && (

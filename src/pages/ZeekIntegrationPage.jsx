@@ -13,6 +13,9 @@ import {
   uploadZeekDataset,
 } from "../api/zeekLab";
 import { zeekLabHelp } from "../content/contextualHelp";
+import { formatPercent, getConfidenceLabel, getDisplayConfidence } from "../utils/modelConfidence";
+import { translateSeverity } from "../utils/severity";
+import { InfoTooltip } from "../components/InfoTooltip";
 
 const ATTACK_TYPE_OPTIONS = [
   { value: "", label: "Cualquier tipo (según modelo)" },
@@ -259,6 +262,17 @@ const ZeekIntegrationPage = () => {
 
       <Card>
         <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold">Datasets disponibles</h2>
+              <p className="text-sm text-gray-400">
+                El dataset activo alimenta la simulación de alertas y las pruebas de carga.
+              </p>
+            </div>
+            <InfoTooltip content="Sube tu CSV con formato conn.log o reutiliza los datasets incluidos. La simulación tomará los registros desde aquí.">
+              <HelpCircleIcon className="w-4 h-4 text-gray-500" />
+            </InfoTooltip>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -274,7 +288,7 @@ const ZeekIntegrationPage = () => {
               className="px-4 py-2 rounded-lg border border-gray-600 hover:border-gray-400 text-sm"
               disabled={uploading}
             >
-              Dataset de referencia (ataques demo)
+              Dataset de referencia
             </button>
             <button
               type="button"
@@ -292,45 +306,24 @@ const ZeekIntegrationPage = () => {
               onChange={handleFileChange}
             />
           </div>
-          <div className="flex items-start gap-2 text-xs text-gray-400">
-            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
-            <p>{zeekLabHelp.datasetSelector}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleForceSync}
-              className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold"
-              disabled={syncLoading}
-            >
-              {syncLoading ? "Sincronizando…" : "Forzar carga automática"}
-            </button>
-            {syncMessage && (
-              <span
-                className={`text-sm ${syncMessage.startsWith("Error") ? "text-red-400" : "text-emerald-400"}`}
-              >
-                {syncMessage}
-              </span>
-            )}
-            {lastSyncAt && (
-              <span className="text-xs text-gray-400">
-                Último sync manual: {dayjs(lastSyncAt).format("YYYY-MM-DD HH:mm:ss")}
-              </span>
-            )}
-          </div>
+          <p className="text-xs text-gray-400">{zeekLabHelp.datasetSelector}</p>
           {datasetError && <p className="text-sm text-red-400">{datasetError}</p>}
-          {datasetInfo && (
+          {datasetInfo ? (
             <div>
               <p className="text-sm text-gray-300">
                 Dataset activo: <span className="font-semibold">{datasetInfo.filename ?? datasetInfo.source}</span>
               </p>
               <p className="text-xs text-gray-400">
-                Columnas detectadas ({datasetInfo.columns.length}): {datasetInfo.columns.join(", ")}
+                Columnas ({datasetInfo.columns.length}): {datasetInfo.columns.join(", ")}
               </p>
               {renderPreviewTable(datasetInfo.columns, datasetInfo.preview)}
+              <p className="text-xs text-sky-300 mt-2">
+                Usa la sección “Simulación de alertas” para generar eventos a partir de este dataset.
+              </p>
             </div>
+          ) : (
+            <p className="text-sm text-gray-400">No hay dataset seleccionado.</p>
           )}
-          {!datasetInfo && <p className="text-sm text-gray-400">No hay dataset seleccionado.</p>}
         </div>
       </Card>
 
@@ -402,15 +395,22 @@ const ZeekIntegrationPage = () => {
         <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-xl font-semibold">Simulación de alertas</h2>
-            <p className="text-sm text-gray-400">Forzá un tipo específico o deja que el modelo determine el ataque.</p>
+            <p className="text-sm text-gray-400">
+              Genera alertas de prueba usando el dataset activo. Puedes forzar un tipo de ataque o dejar que el modelo decida.
+            </p>
           </div>
           <div className="flex items-start gap-2 text-xs text-gray-400">
-            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
-            <p>{zeekLabHelp.simulation}</p>
+            <InfoTooltip content={zeekLabHelp.simulation}>
+              <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5 cursor-pointer" />
+            </InfoTooltip>
+            <p>{datasetInfo ? `Dataset en uso: ${datasetInfo.filename ?? datasetInfo.source}` : "Selecciona un dataset en la sección superior antes de simular."}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <label className="flex flex-col gap-2 text-sm">
               Tipo de alerta
+              <InfoTooltip content="Si no eliges un tipo, simularemos registros en orden desde el dataset activo.">
+                <HelpCircleIcon className="w-4 h-4 text-gray-500 cursor-pointer" />
+              </InfoTooltip>
               <select
                 className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2"
                 value={simulationType}
@@ -425,6 +425,9 @@ const ZeekIntegrationPage = () => {
             </label>
             <label className="flex flex-col gap-2 text-sm">
               Cantidad
+              <InfoTooltip content="Número de alertas a generar en esta ejecución (máximo 10 de golpe).">
+                <HelpCircleIcon className="w-4 h-4 text-gray-500 cursor-pointer" />
+              </InfoTooltip>
               <input
                 type="number"
                 min={1}
@@ -438,10 +441,10 @@ const ZeekIntegrationPage = () => {
               <button
                 type="button"
                 onClick={handleSimulate}
-                className="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold"
-                disabled={simulateLoading}
+                className="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={simulateLoading || !datasetInfo}
               >
-                {simulateLoading ? "Generando…" : "Simular alerta"}
+                {simulateLoading ? "Generando…" : datasetInfo ? "Simular alerta" : "Selecciona un dataset"}
               </button>
             </div>
           </div>
@@ -458,10 +461,13 @@ const ZeekIntegrationPage = () => {
                     className="border border-gray-800 rounded-lg px-4 py-3 text-sm bg-black/30"
                   >
                     <p className="font-semibold text-white">
-                      {alert.attack_type} · {alert.severity} · {new Date(alert.timestamp).toLocaleString()}
+                      {alert.attack_type} · {translateSeverity(alert.severity)} ·{" "}
+                      {new Date(alert.timestamp).toLocaleString()}
                     </p>
                     <p className="text-gray-400 text-xs">
-                      {alert.src_ip}:{alert.src_port} → {alert.dst_ip}:{alert.dst_port} · score {(alert.model_score ?? 0).toFixed(3)} · rule {alert.rule_name ?? "N/A"}
+                      {alert.src_ip}:{alert.src_port} → {alert.dst_ip}:{alert.dst_port} ·{" "}
+                      {formatPercent(getDisplayConfidence(alert.model_score ?? 0, alert.model_label ?? "benign"))}{" "}
+                      {getConfidenceLabel(alert.model_label ?? "benign")} · regla {alert.rule_name ?? "N/A"}
                     </p>
                   </div>
                 ))}
@@ -521,7 +527,7 @@ const ZeekIntegrationPage = () => {
             <h2 className="text-xl font-semibold">Integración en tiempo real con Zeek</h2>
             <p className="text-sm text-gray-400">
               El cron ejecuta <code className="font-mono text-xs">sync_zeek_and_simulate.sh</code> cada minuto y alimenta el
-              dataset sincronizado. Puedes forzar un ciclo manual y revisar cuándo fue la última sincronización.
+              dataset sincronizado. Usa este panel para forzar una sincronización manual cuando lo necesites.
             </p>
           </div>
           <div className="text-sm text-gray-300">
@@ -534,7 +540,7 @@ const ZeekIntegrationPage = () => {
               className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold"
               disabled={syncLoading}
             >
-              {syncLoading ? "Sincronizando…" : "Forzar carga automática"}
+              {syncLoading ? "Sincronizando…" : "Forzar sincronización"}
             </button>
             {syncMessage && (
               <span className={`text-sm ${syncMessage.startsWith("Error") ? "text-red-400" : "text-emerald-400"}`}>

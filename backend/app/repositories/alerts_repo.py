@@ -106,8 +106,8 @@ class AlertRepository:
             bucket_expr = func.strftime("%Y-%m-%dT%H:00:00", Alert.timestamp).label("bucket")
         else:
             bucket_expr = func.to_char(
-                Alert.timestamp,
-                literal("%Y-%m-%dT%H:00:00"),
+                func.date_trunc("hour", Alert.timestamp),
+                literal("YYYY-MM-DD\"T\"HH24:00:00"),
             ).label("bucket")
         stmt = (
             select(
