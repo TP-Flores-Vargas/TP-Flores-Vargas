@@ -48,6 +48,7 @@ class Alert(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True, nullable=False)
+    ingested_at: datetime = Field(default_factory=datetime.utcnow, index=True, nullable=False)
     severity: SeverityEnum = Field(index=True, nullable=False)
     attack_type: AttackTypeEnum = Field(index=True, nullable=False)
     src_ip: str = Field(nullable=False, index=True)

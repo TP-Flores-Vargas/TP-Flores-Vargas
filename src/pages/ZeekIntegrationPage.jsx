@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 
+import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import Card from "../components/common/Card.jsx";
 import {
   executeKaliCommand,
@@ -11,6 +12,7 @@ import {
   toggleSyntheticSource,
   uploadZeekDataset,
 } from "../api/zeekLab";
+import { zeekLabHelp } from "../content/contextualHelp";
 
 const ATTACK_TYPE_OPTIONS = [
   { value: "", label: "Cualquier tipo (según modelo)" },
@@ -290,14 +292,10 @@ const ZeekIntegrationPage = () => {
               onChange={handleFileChange}
             />
           </div>
-          <p className="text-xs text-gray-400">
-            El dataset de referencia incluye ejemplos curados de cada ataque para pruebas rápidas. El dataset sincronizado
-            proviene del último `conn.log` procesado por Zeek; úsalo para ver cómo reacciona el modelo ante tráfico real.
-          </p>
-          <p className="text-xs text-gray-400">
-            Usa el dataset de referencia para validar cada tipo de ataque (archivo empaquetado) o selecciona el dataset
-            sincronizado que proviene de la última captura real de Zeek. Subir un CSV personalizado no afecta el flujo automático.
-          </p>
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+            <p>{zeekLabHelp.datasetSelector}</p>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -344,6 +342,10 @@ const ZeekIntegrationPage = () => {
               Mantén vivo el flujo de alertas mock basado en el generador interno. Puedes activarlo o detenerlo sin
               reiniciar el backend.
             </p>
+          </div>
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+            <p>{zeekLabHelp.syntheticGenerator}</p>
           </div>
           <div className="flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-2 text-sm">
@@ -401,6 +403,10 @@ const ZeekIntegrationPage = () => {
           <div>
             <h2 className="text-xl font-semibold">Simulación de alertas</h2>
             <p className="text-sm text-gray-400">Forzá un tipo específico o deja que el modelo determine el ataque.</p>
+          </div>
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+            <p>{zeekLabHelp.simulation}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <label className="flex flex-col gap-2 text-sm">
@@ -472,6 +478,10 @@ const ZeekIntegrationPage = () => {
             <p className="text-sm text-gray-400">
               Se ejecutan vía SSH cuando las credenciales están configuradas. En desarrollo se usa un fallback local.
             </p>
+          </div>
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+            <p>{zeekLabHelp.commands}</p>
           </div>
           <textarea
             className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm min-h-[120px]"

@@ -1,4 +1,24 @@
 services:
+  db:
+    image: postgres:16
+    container_name: ids-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ids
+      POSTGRES_USER: ids
+      POSTGRES_PASSWORD: ids
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ids -d ids"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - ids-net
+
   backend:
     build:
       context: ./backend
@@ -8,8 +28,12 @@ services:
       - "8000:8000"
     environment:
       - UVICORN_WORKERS=1
+      - DATABASE_URL=postgresql+psycopg://ids:ids@db:5432/ids
     networks:
       - ids-net
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build:
@@ -26,3 +50,6 @@ services:
 networks:
   ids-net:
     driver: bridge
+
+volumes:
+  pgdata:

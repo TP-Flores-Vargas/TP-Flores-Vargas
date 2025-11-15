@@ -1,6 +1,8 @@
 import Card from "../common/Card.jsx";
+import { HelpCircleIcon } from "../../assets/icons/index.jsx";
+import { InfoTooltip } from "../InfoTooltip";
 
-const CardMetric = ({ title, value, description, tone = "text-white", onClick }) => {
+const CardMetric = ({ title, value, description, tone = "text-white", onClick, helperText }) => {
   const clickable = typeof onClick === "function";
   const handleKeyDown = (event) => {
     if (!clickable) return;
@@ -17,7 +19,20 @@ const CardMetric = ({ title, value, description, tone = "text-white", onClick })
       tabIndex={clickable ? 0 : undefined}
       onKeyDown={handleKeyDown}
     >
-      <p className="text-sm font-medium text-gray-400">{title}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-gray-400">{title}</p>
+        {helperText && (
+          <InfoTooltip content={helperText}>
+            <button
+              type="button"
+              aria-label={helperText}
+              className="rounded-full border border-white/10 bg-white/5 p-1 text-gray-400 hover:text-white"
+            >
+              <HelpCircleIcon className="w-4 h-4" aria-hidden />
+            </button>
+          </InfoTooltip>
+        )}
+      </div>
       <p className={`text-3xl font-bold ${tone}`}>{value}</p>
       {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
     </Card>

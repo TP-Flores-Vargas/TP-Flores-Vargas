@@ -61,6 +61,9 @@ async def startup_event():
                 settings.synthetic_rate_per_min,
                 seed=settings.synthetic_seed,
             )
+    elif ingestion_mode == "MANUAL":
+        # DB freshly initialized; ingestion happens via cron / manual sync.
+        pass
     elif ingestion_mode == "ZEEK_CSV":
         if not settings.zeek_conn_path:
             raise RuntimeError("ZEEK_CSV requiere ZEEK_CONN_PATH configurado en .env")

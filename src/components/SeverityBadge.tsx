@@ -1,4 +1,6 @@
 import type { Severity } from "../api/alerts";
+import { getSeverityTooltip } from "../content/contextualHelp";
+import { InfoTooltip } from "./InfoTooltip";
 
 const palette: Record<Severity, string> = {
   Low: "bg-emerald-500/20 text-emerald-300 border border-emerald-400/50",
@@ -11,8 +13,11 @@ interface Props {
   value: Severity;
 }
 
-export const SeverityBadge = ({ value }: Props) => (
-  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${palette[value]}`}>
-    {value}
-  </span>
-);
+export const SeverityBadge = ({ value }: Props) => {
+  const badge = (
+    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${palette[value]}`}>
+      {value}
+    </span>
+  );
+  return <InfoTooltip content={getSeverityTooltip(value)}>{badge}</InfoTooltip>;
+};

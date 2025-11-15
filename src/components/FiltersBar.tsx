@@ -175,7 +175,7 @@ export const FiltersBar = ({
               onClick={onApply}
               disabled={loading}
             >
-              Aplicar
+              Aplicar filtros
             </button>
             <button
               type="button"
@@ -183,7 +183,7 @@ export const FiltersBar = ({
               className="px-3 py-2 bg-slate-800 border border-gray-600 text-sm text-gray-200 rounded-lg"
               onClick={onExport}
             >
-              Export CSV
+              Exportar CSV
             </button>
             <button
               type="button"

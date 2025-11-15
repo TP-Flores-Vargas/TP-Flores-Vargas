@@ -81,6 +81,29 @@ export interface DashboardMetrics {
   last24h_series: TimeSeriesBucket[];
 }
 
+export interface AttackTypeStat {
+  attack_type: string;
+  count: number;
+  avg_model_score: number;
+}
+
+export interface DatasetBreakdownEntry {
+  source: string | null;
+  label: string | null;
+  count: number;
+}
+
+export interface ModelPerformanceMetrics {
+  window_hours: number;
+  window_start: string;
+  window_end: string;
+  total_alerts: number;
+  avg_model_score: number;
+  avg_latency_ms: number;
+  attack_type_stats: AttackTypeStat[];
+  dataset_breakdown: DatasetBreakdownEntry[];
+}
+
 export const fetchAlerts = async (filters: Partial<AlertFilters>) => {
   const params: Record<string, unknown> = {
     page: filters.page ?? 1,
@@ -120,6 +143,13 @@ export const fetchMetrics = async () => {
 
 export const fetchDashboardMetrics = async () => {
   const { data } = await apiClient.get<DashboardMetrics>("/metrics/dashboard");
+  return data;
+};
+
+export const fetchModelPerformanceMetrics = async (windowHours = 24) => {
+  const { data } = await apiClient.get<ModelPerformanceMetrics>(
+    `/metrics/model-performance?window_hours=${windowHours}`,
+  );
   return data;
 };
 

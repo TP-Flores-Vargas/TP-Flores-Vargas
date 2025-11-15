@@ -21,6 +21,7 @@ from ..schemas import (
     AttackDistributionEntry,
     DashboardMetrics,
     MetricsOverview,
+    ModelPerformanceMetrics,
     TimeSeriesBucket,
 )
 
@@ -201,6 +202,17 @@ class AlertsService:
         )
         self._set_cache("dashboard", result)
         return result
+
+    def model_performance_metrics(self, window_hours: int = 24) -> ModelPerformanceMetrics:
+        window_hours = max(1, min(window_hours, 168))
+        since = datetime.utcnow() - timedelta(hours=window_hours)
+        payload = self.repository.model_performance_metrics(since)
+        return ModelPerformanceMetrics(
+            window_hours=window_hours,
+            window_start=since,
+            window_end=datetime.utcnow(),
+            **payload,
+        )
 
     async def stream_alerts(self) -> AsyncGenerator[dict, None]:
         queue = await self.stream_manager.subscribe()

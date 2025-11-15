@@ -8,7 +8,7 @@ MVP funcional de un IDS con backend FastAPI + SQLite y frontend React/Vite + Typ
 
 | Capa     | Descripción |
 |----------|-------------|
-| Backend  | `backend/app` con FastAPI, SQLModel y rutas `/alerts`, `/metrics/overview`, `/alerts/export.csv`, `/stream`. Generador sintético (`app/services/generators/synthetic_generator.py`) puebla y emite datos reproducibles. |
+| Backend  | `backend/app` con FastAPI, SQLModel y rutas `/alerts`, `/metrics/overview`, `/alerts/export.csv`, `/stream`. La base ahora vive en **Postgres** (Docker) y se accede vía `DATABASE_URL`. El generador sintético (`app/services/generators/synthetic_generator.py`) puebla y emite datos reproducibles cuando lo activas. |
 | Frontend | React 18 + Vite 7 + TypeScript (`src/`) con Zustand para el store (`src/store/alerts.ts`). La página principal (`src/pages/AlertsPage.tsx`) integra filtros, métricas, serie 24h, tabla paginada, drawer y toggle Live (SSE). |
 | QA       | Dataset reproducible `tools/sample_cicids_extract.csv`, Postman (`qa/postman/*`), pruebas UI Playwright (`qa/ui/*`) y guía `README_QA.md`. |
 
@@ -17,6 +17,12 @@ MVP funcional de un IDS con backend FastAPI + SQLite y frontend React/Vite + Typ
 ### Requisitos
 - Python 3.12+ (venv recomendado), Node.js 18+.
 - En WSL/Ubuntu: `sudo apt install python3-pip python3.12-venv` antes de crear el entorno.
+- **Postgres 16+** (se provee un contenedor listo). Levántalo con:
+  ```bash
+  docker compose up db -d
+  docker compose ps db    # confirma que está healthy
+  ```
+  Las credenciales por defecto son `ids/ids` y la base `ids` (ver `docker-compose.yml`).
 
 ---
 
@@ -29,7 +35,10 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- `.env` soporta: `DATABASE_URL`, `ALLOW_ORIGINS`, `INGESTION_MODE` (`SYNTHETIC_SEED`, `REPLAY_CSV`, `LIVE_EMULATION`, `ZEEK_CSV`), `SYNTHETIC_RATE_PER_MIN`, `SYNTHETIC_AUTOSTART`, `REPLAY_SPEED`, `STREAM_MODE` (`SSE|WS`), `SYNTHETIC_SEED`, `SYNTHETIC_SEED_COUNT`, `MODEL_PATH`, `ZEEK_CONN_PATH`, `ZEEK_SEED_LIMIT`. Por defecto se siembran **200** alertas y el live emitter queda **detenido** hasta que lo actives desde la UI (usa `SYNTHETIC_AUTOSTART=true` si querés que arranque solo).
+> ⚠️ Asegúrate de que el contenedor `db` esté corriendo antes de levantar el backend (`docker compose up db -d`). El valor por defecto de `DATABASE_URL` (`postgresql+psycopg://ids:ids@localhost:5432/ids`) apunta a ese servicio. Si usas un Postgres propio, ajusta la URL en `backend/.env` o exporta la variable en tu shell.
+
+- `.env` soporta: `DATABASE_URL`, `ALLOW_ORIGINS`, `INGESTION_MODE` (`MANUAL`, `SYNTHETIC_SEED`, `REPLAY_CSV`, `LIVE_EMULATION`, `ZEEK_CSV`), `SYNTHETIC_RATE_PER_MIN`, `SYNTHETIC_AUTOSTART`, `REPLAY_SPEED`, `STREAM_MODE` (`SSE|WS`), `SYNTHETIC_SEED`, `SYNTHETIC_SEED_COUNT`, `MODEL_PATH`, `ZEEK_CONN_PATH`, `ZEEK_SEED_LIMIT`. Ahora el valor por defecto es **`MANUAL`**, por lo que la BD arranca vacía y solo se llena cuando ejecutes `sync_zeek_and_simulate.sh`, el cron o cambies explícitamente a otro modo (p. ej. `INGESTION_MODE=SYNTHETIC_SEED` para regenerar los 200 registros de demo). Para entornos locales usa la URL `postgresql+psycopg://ids:ids@localhost:5432/ids` (el contenedor `db`), y en Docker la URL se convierte en `postgresql+psycopg://ids:ids@db:5432/ids` gracias a `docker-compose.yml`.
+- La tabla `alerts` ahora incluye el campo `ingested_at` (se usa para calcular la latencia). `init_db()` detecta si la columna falta y ejecuta el `ALTER TABLE` por ti, asignando el mismo timestamp de la alerta a los registros antiguos. Esto evita errores tipo “column alerts.ingested_at does not exist” después de un pull.
 - Endpoints principales: `/alerts`, `/alerts/{id}`, `/alerts/export.csv`, `/metrics/overview`, `/stream` (SSE), `/health`.
 - Tests: `pytest backend/tests`.
 
@@ -55,6 +64,8 @@ chmod +x start.sh
 ./start.sh
 ```
 
+> Nota: este script asume que tienes Postgres corriendo en `localhost:5432`. Si usas el contenedor incluido, ejecuta antes `docker compose up db -d`.
+
 - Si `backend/venv` no existe, se crea y se instalan dependencias (usa `pip --target <site-packages>` si el venv no trae pip). Para forzar reinstalación tras editar `requirements.txt`, elimina `backend/venv/.deps_installed`.
 - Tras lanzar Uvicorn, el script espera a que `http://127.0.0.1:8000/health` responda antes de iniciar Vite, evitando los timeouts iniciales del frontend.
 - El backend corre en segundo plano; al presionar `Ctrl+C` en Vite se limpia el proceso de Uvicorn.
@@ -64,6 +75,26 @@ chmod +x start.sh
 2. Para seguir otro día vuelve a correr `./start.sh` (reuse venv y node_modules automáticos).
 
 > Si querés levantar todo el laboratorio (cron + sync + backend/frontend) sin pasos manuales, usá `scripts/start_lab.sh` tal como se explica en la sección **Arranque rápido tras reinicios**.
+
+---
+
+### Métricas y ayuda contextual
+
+- **Desempeño del modelo**: el dashboard incluye el panel `ModelPerformancePanel` (consulta `/metrics/model-performance`) con tooltips que explican cada indicador (alertas modeladas, confianza media, latencia). Los valores provienen del backend (promedio, breakdown por dataset y tipo de ataque) y ya funcionan tanto con SQLite como con Postgres gracias a los casts de JSON.
+- **Marco de severidad**: Low/Medium/High/Critical se alinean ahora con el framework de NIST SP 800-61 + los rangos CVSS v3.1 (CVSS <4, 4-6.9, 7-8.9, ≥9). Toda tarjeta o badge de severidad muestra en hover por qué cae en ese nivel y ejemplos de ataques (DDoS, BruteForce, etc.). El componente `SeverityGuidanceCard` aparece en Dashboard, Alertas y Reportes.
+- **Ayuda contextual**: Dashboard, Alertas, Reportes y la vista de Pruebas/Zeek incorporan tooltips accesibles (`HelpCircleIcon`) que describen cada métrica, filtro y flujo (p. ej. cómo usar el dataset sincronizado o qué representa “Alertas Hoy”). Esto reduce la carga cognitiva en demos o cuando se incorpora un nuevo analista. Además, hay popovers (“¿Cómo clasifica el modelo?”) que muestran el criterio exacto que sigue el modelo para mapear cada tipo de ataque (PortScan, SQLi, Bot, etc.) a una severidad concreta.
+
+---
+
+### Reinicializar la base de datos del backend
+Siempre que quieras comenzar completamente en limpio (p.ej. tras un pull grande o antes de una demo) ejecuta:
+
+```bash
+cd "/mnt/d/Desarrollo Tesis/TP-Flores-Vargas"
+backend/venv/bin/python scripts/reset_backend_db.py
+```
+
+Este script detecta el motor configurado en `DATABASE_URL`: si es SQLite elimina `backend/alerts.db` y recrea la tabla; si es Postgres (el caso normal) ejecuta un `drop_all()/create_all()` para dejarla vacía. La base queda lista para que cron, los botones de la UI o tus scripts vuelvan a poblarla. Necesita que el entorno `backend/venv` exista (se crea automáticamente la primera vez que corrés `./start.sh`); si todavía no lo hiciste, ejecuta `./start.sh` antes de llamar al script para que se instalen `sqlalchemy` y las demás dependencias.
 
 ---
 
@@ -92,6 +123,7 @@ chmod +x start.sh
 - **Modo manual:** si prefieres validar datasets específicos, copia el CSV deseado a `backend/data/default_csv/`, usa el botón “Usar dataset por defecto” en la pestaña y luego pulsa “Simular alerta”.
 - El adaptador calcula las **top-20 features** del pipeline (ver `CICIDS2017_multiclass_feature_importance_full.csv`) a partir de los campos de Zeek y llama al RandomForest para obtener `model_score`, la etiqueta multiclase y la severidad.
 - Cada alerta conserva en `meta` el registro Zeek original, las features derivadas y las probabilidades completas del modelo.
+- El panel **Desempeño del modelo** (frontend) consulta `GET /metrics/model-performance` y resume, para la ventana seleccionada, cuántas alertas generó el modelo, su confianza promedio, la latencia Zeek→alerta y la distribución por tipo de ataque/dataset. Cada métrica incluye tooltips para reducir la carga cognitiva y explicar por qué es relevante.
 
 Variables adicionales relacionadas:
 
@@ -406,6 +438,12 @@ Kali → Zeek (conn.log) → CSV export → WSL → FastAPI → Dashboard de ale
 ```
 
 ### Arranque rápido tras reinicios
+0. **Levanta Postgres local (si no está corriendo)**
+   ```bash
+   cd "/mnt/d/Desarrollo Tesis/TP-Flores-Vargas"
+   docker compose up db -d
+   docker compose ps db   # confirma que está healthy
+   ```
 1. **Arranca Zeek en la VM Ubuntu (`192.168.23.128`)**
    ```bash
    ssh -i ~/.ssh/zeek_vm ubuntu@192.168.23.128 <<'EOF'
@@ -421,7 +459,32 @@ Kali → Zeek (conn.log) → CSV export → WSL → FastAPI → Dashboard de ale
    chmod +x scripts/start_lab.sh   # solo la primera vez
    scripts/start_lab.sh
    ```
-   Ese script hace internamente (te pedirá la contraseña sudo para arrancar cron si es necesario):
-   - `sudo service cron start`
-   - Ejecuta `./sync_zeek_and_simulate.sh` (si el backend aún no está arriba verás un aviso; cron se encargará cuando `./start.sh` quede corriendo)
-   - `./start.sh` en la raíz del repo (levanta FastAPI + Vite)
+   El script arranca `cron` (pidiéndote la contraseña `sudo` si no estaba activo) y delega en `./start.sh` para levantar FastAPI + Vite. Para forzar un ciclo inmediato de ingestión puedes ejecutar manualmente `./sync_zeek_and_simulate.sh` en otra terminal o invocar `RUN_INITIAL_SYNC=1 scripts/start_lab.sh` (el script espera a que `/health` esté disponible y luego dispara el sync). Recuerda que Postgres debe seguir corriendo (`docker compose ps db`).
+
+#### ¿Reinicié todo o cambié de máquina?
+- **WSL/host nuevo**:
+  1. Clona el repo y entra al directorio.
+  2. `docker compose up db -d` para levantar Postgres.
+  3. Crea el venv e instala dependencias:
+     ```bash
+     cd backend
+     python3 -m venv venv
+     source venv/bin/activate
+     pip install -r requirements.txt
+     ```
+  4. Inicializa la base:
+     ```bash
+     backend/venv/bin/python scripts/reset_backend_db.py
+     ```
+  5. Ejecuta `scripts/start_lab.sh` y listo.
+- **Solo reinicié las VMs (Zeek/Kali)**:
+  1. Verifica que Postgres sigue arriba (`docker compose ps db`); si no, `docker compose up db -d`.
+  2. Arranca Zeek (paso 1), genera tráfico si quieres y vuelve a correr `scripts/start_lab.sh`.
+- **Quiero empezar limpio antes de una demo**:
+  1. `backend/venv/bin/python scripts/reset_backend_db.py` (deja la base vacía, sea SQLite o Postgres).
+  2. `scripts/start_lab.sh` (usa `RUN_INITIAL_SYNC=1` si querés el primer lote al instante).
+  3. Deja cron corriendo o usa el botón “Forzar carga automática”.
+- **Cambio de máquina/VM**:
+  - Copia el repo.
+  - Repite los pasos de “WSL/host nuevo”.
+  - Si cambiaste de IPs/usuarios, actualiza `backend/.env` y los scripts (`sync_zeek_and_simulate.sh`, `sync_zeek_csv.sh`) con las nuevas direcciones/llaves SSH.

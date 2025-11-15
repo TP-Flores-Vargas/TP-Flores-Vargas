@@ -3,9 +3,14 @@ import dayjs from "dayjs";
 
 import { fetchAlerts } from "../api/alerts";
 import Card from "../components/common/Card.jsx";
+import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import { SeverityBadge } from "../components/SeverityBadge";
+import { SeverityClassificationPopover } from "../components/SeverityClassificationPopover";
+import { SeverityGuidanceCard } from "../components/SeverityGuidanceCard";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { useAlertsStore } from "../store/alerts";
+import { reportsHelp } from "../content/contextualHelp";
 
 const RANGE_OPTIONS = {
   "24h": { label: "Últimas 24h", hours: 24 },
@@ -184,23 +189,35 @@ const ReportsPage = () => {
           <p className="text-sm text-gray-400">Análisis descargable basado en las alertas actuales.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={handleCsvDownload}
-            disabled={downloading}
-            className="inline-flex items-center gap-2 rounded-lg bg-sky-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
-          >
-            {downloading ? "Generando CSV..." : "Descargar CSV de alertas"}
-          </button>
-          <button
-            type="button"
-            onClick={handleSummaryDownload}
-            disabled={summaryDownloading}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:text-white disabled:opacity-60"
-          >
-            {summaryDownloading ? "Compilando..." : "Descargar informe"}
-          </button>
+          <InfoTooltip content={reportsHelp.download}>
+            <button
+              type="button"
+              onClick={handleCsvDownload}
+              disabled={downloading}
+              className="inline-flex items-center gap-2 rounded-lg bg-sky-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+            >
+              {downloading ? "Generando CSV..." : "Descargar CSV de alertas"}
+            </button>
+          </InfoTooltip>
+          <InfoTooltip content={reportsHelp.download}>
+            <button
+              type="button"
+              onClick={handleSummaryDownload}
+              disabled={summaryDownloading}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:text-white disabled:opacity-60"
+            >
+              {summaryDownloading ? "Compilando..." : "Descargar informe"}
+            </button>
+          </InfoTooltip>
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+        <SeverityClassificationPopover />
+        <span>Consulta el marco si necesitas justificar por qué cada ataque cae en cierto nivel.</span>
+      </div>
+      <div className="flex items-start gap-2 text-xs text-gray-400 max-w-3xl">
+        <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+        <p>{reportsHelp.summary}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -240,6 +257,8 @@ const ReportsPage = () => {
           <p className="text-3xl font-bold text-white mt-1">{formatNumber(uniqueSources)}</p>
         </Card>
       </div>
+
+      <SeverityGuidanceCard compact />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>

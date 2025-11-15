@@ -8,11 +8,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite:///./alerts.db"
+    database_url: str = (
+        "postgresql+psycopg://ids:ids@localhost:5432/ids"  # default local Postgres
+    )
     allow_origins: List[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
-    ingestion_mode: str = "SYNTHETIC_SEED"
+    ingestion_mode: str = "MANUAL"
     synthetic_seed_count: int = 200
     synthetic_seed: int = 42
     synthetic_rate_per_min: int = 5

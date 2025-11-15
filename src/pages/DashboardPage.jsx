@@ -5,12 +5,17 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { AlertTriangleIcon, CheckCircleIcon, DownloadIcon, XCircleIcon } from "../assets/icons/index.jsx";
 import Card from "../components/common/Card.jsx";
 import CardMetric from "../components/metrics/CardMetric.jsx";
+import { ModelPerformancePanel } from "../components/ModelPerformancePanel";
+import { SeverityClassificationPopover } from "../components/SeverityClassificationPopover";
+import { SeverityGuidanceCard } from "../components/SeverityGuidanceCard";
 import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { constants } from "../config/constants.js";
 import { useInterval } from "../hooks/useInterval.js";
 import { defaultFilters, useAlertsStore } from "../store/alerts";
-import { fetchDashboardMetrics } from "../api/alerts";
+import { fetchDashboardMetrics, fetchModelPerformanceMetrics } from "../api/alerts";
+import { dashboardHelp } from "../content/contextualHelp";
 
 dayjs.extend(relativeTime);
 
@@ -21,9 +26,9 @@ const severityRank = {
   Low: 1,
 };
 
-const ServerStatusIndicator = ({ status, causes, onNavigateAlerts }) => {
+const ServerStatusIndicator = ({ status, causes, onNavigateAlerts, helperCopy }) => {
   const HealthIcon = status.icon;
-  return (
+  const card = (
     <Card className="relative overflow-hidden text-white border border-white/10">
       <div className={`absolute inset-0 ${status.color}`} aria-hidden />
       <div className="relative flex items-center justify-between">
@@ -56,6 +61,7 @@ const ServerStatusIndicator = ({ status, causes, onNavigateAlerts }) => {
       )}
     </Card>
   );
+  return <InfoTooltip content={helperCopy}>{card}</InfoTooltip>;
 };
 
 const DashboardPage = ({ onNavigate }) => {
@@ -70,6 +76,8 @@ const DashboardPage = ({ onNavigate }) => {
   const [lastActivity, setLastActivity] = useState(dayjs());
   const [dashboardMetrics, setDashboardMetrics] = useState(null);
   const [dashboardError, setDashboardError] = useState(null);
+  const [modelMetrics, setModelMetrics] = useState(null);
+  const [modelError, setModelError] = useState(null);
 
   const loadDashboardMetrics = useCallback(async () => {
     try {
@@ -79,6 +87,17 @@ const DashboardPage = ({ onNavigate }) => {
     } catch (error) {
       console.error("fetchDashboardMetrics failed", error);
       setDashboardError("No se pudieron cargar las métricas globales.");
+    }
+  }, []);
+
+  const loadModelMetrics = useCallback(async () => {
+    try {
+      const data = await fetchModelPerformanceMetrics();
+      setModelMetrics(data);
+      setModelError(null);
+    } catch (error) {
+      console.error("fetchModelPerformanceMetrics failed", error);
+      setModelError("No se pudo calcular el desempeño del modelo.");
     }
   }, []);
 
@@ -93,12 +112,14 @@ const DashboardPage = ({ onNavigate }) => {
 
   useEffect(() => {
     loadDashboardMetrics();
-  }, [loadDashboardMetrics]);
+    loadModelMetrics();
+  }, [loadDashboardMetrics, loadModelMetrics]);
 
   useInterval(() => {
     loadAlerts();
     refreshMetrics();
     loadDashboardMetrics();
+    loadModelMetrics();
     setLastActivity(dayjs());
   }, constants.REFRESH_INTERVAL_MS ?? 30 * 1000);
 
@@ -254,11 +275,13 @@ const DashboardPage = ({ onNavigate }) => {
           status={healthStatus}
           causes={statusCauses}
           onNavigateAlerts={(partial) => applyFiltersAndNavigate(partial)}
+          helperCopy={dashboardHelp.serverStatus}
         />
         <CardMetric
           title="Alertas Hoy"
           value={alertsToday}
           description="Ir a la vista con ese rango"
+          helperText={dashboardHelp.alertsToday}
           onClick={() =>
             applyFiltersAndNavigate({
               from_ts: dayjs().startOf("day").format("YYYY-MM-DDTHH:mm"),
@@ -270,17 +293,33 @@ const DashboardPage = ({ onNavigate }) => {
           title="Alertas Totales"
           value={totalAlerts}
           description="Ver todas las alertas"
+          helperText={dashboardHelp.totalAlerts}
           onClick={() => applyFiltersAndNavigate({ ...defaultFilters })}
         />
-        <CardMetric title="Versión del Sistema" value={constants.VERSION || "MVP"} tone="text-white" />
+        <CardMetric
+          title="Versión del Sistema"
+          value={constants.VERSION || "MVP"}
+          tone="text-white"
+          helperText={dashboardHelp.version}
+        />
       </div>
 
-      <StatsCards
-        counts={severitySnapshot ?? null}
-        onFilter={(severity) =>
-          applyFiltersAndNavigate(severity ? { severity: [severity] } : { ...defaultFilters })
-        }
-      />
+      <div className="space-y-4 rounded-2xl border border-white/5 bg-slate-950/30 p-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">Clasificación de severidad</p>
+            <p className="text-xs text-gray-400">{dashboardHelp.severityIntro}</p>
+          </div>
+          <SeverityClassificationPopover />
+        </div>
+        <StatsCards
+          counts={severitySnapshot ?? null}
+          onFilter={(severity) =>
+            applyFiltersAndNavigate(severity ? { severity: [severity] } : { ...defaultFilters })
+          }
+        />
+        <SeverityGuidanceCard />
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-2">
@@ -327,9 +366,12 @@ const DashboardPage = ({ onNavigate }) => {
         </Card>
       </div>
 
+      <ModelPerformancePanel data={modelMetrics} error={modelError} />
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card>
-          <h2 className="text-lg font-semibold text-white mb-4">Distribución por Tipo de Ataque</h2>
+          <h2 className="text-lg font-semibold text-white mb-1">Distribución por Tipo de Ataque</h2>
+          <p className="text-xs text-gray-500 mb-3">{dashboardHelp.attackDistribution}</p>
           <div className="space-y-3">
             {attackDistribution.sorted.map(([tipo, total]) => {
               const percentage = attackDistribution.max ? Math.round((total / attackDistribution.max) * 100) : 0;

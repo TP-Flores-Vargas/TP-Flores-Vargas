@@ -38,6 +38,7 @@ class AlertCreate(AlertBase):
 
 class AlertRead(AlertBase):
     id: uuid.UUID
+    ingested_at: datetime
 
     class Config:
         from_attributes = True
@@ -91,3 +92,26 @@ class DashboardMetrics(BaseModel):
     attack_distribution: List[AttackDistributionEntry]
     severity_last24h: SeverityCounts
     last24h_series: List[TimeSeriesBucket]
+
+
+class AttackTypeStat(BaseModel):
+    attack_type: str
+    count: int
+    avg_model_score: float
+
+
+class DatasetBreakdownEntry(BaseModel):
+    source: str | None
+    label: str | None
+    count: int
+
+
+class ModelPerformanceMetrics(BaseModel):
+    window_hours: int
+    window_start: datetime
+    window_end: datetime
+    total_alerts: int
+    avg_model_score: float
+    avg_latency_ms: float
+    attack_type_stats: List[AttackTypeStat]
+    dataset_breakdown: List[DatasetBreakdownEntry]

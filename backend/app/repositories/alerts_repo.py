@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Iterable, Sequence
 
-from sqlalchemy import String, cast, func, select
+from sqlalchemy import String, cast, func, literal, select
 from sqlmodel import Session
 
 from ..models import Alert
@@ -51,10 +51,10 @@ class AlertRepository:
                 | func.lower(Alert.dst_ip).like(like_query)
                 | func.lower(Alert.rule_name).like(like_query)
                 | func.lower(Alert.rule_id).like(like_query)
-                | func.lower(Alert.attack_type).like(like_query)
-                | func.lower(Alert.severity).like(like_query)
-                | func.lower(Alert.protocol).like(like_query)
-                | func.lower(Alert.model_label).like(like_query)
+                | func.lower(cast(Alert.attack_type, String)).like(like_query)
+                | func.lower(cast(Alert.severity, String)).like(like_query)
+                | func.lower(cast(Alert.protocol, String)).like(like_query)
+                | func.lower(cast(Alert.model_label, String)).like(like_query)
                 | func.lower(cast(Alert.model_score, String)).like(like_query)
             )
         return stmt
@@ -100,9 +100,18 @@ class AlertRepository:
 
     def last24h_series(self):
         since = datetime.utcnow() - timedelta(hours=24)
+        bind = self.session.get_bind()
+        dialect = bind.dialect.name if bind else "sqlite"
+        if dialect == "sqlite":
+            bucket_expr = func.strftime("%Y-%m-%dT%H:00:00", Alert.timestamp).label("bucket")
+        else:
+            bucket_expr = func.to_char(
+                Alert.timestamp,
+                literal("%Y-%m-%dT%H:00:00"),
+            ).label("bucket")
         stmt = (
             select(
-                func.strftime("%Y-%m-%dT%H:00:00", Alert.timestamp).label("bucket"),
+                bucket_expr,
                 func.count(),
             )
             .where(Alert.timestamp >= since)
@@ -130,3 +139,66 @@ class AlertRepository:
 
     def latest_timestamp(self) -> datetime | None:
         return self.session.exec(select(func.max(Alert.timestamp)).select_from(Alert)).scalar()
+
+    def model_performance_metrics(self, since: datetime):
+        bind = self.session.get_bind()
+        dialect = bind.dialect.name if bind else "sqlite"
+
+        total_stmt = select(func.count()).where(Alert.timestamp >= since)
+        total_alerts = self.session.exec(total_stmt).scalar() or 0
+
+        avg_score_stmt = select(func.avg(Alert.model_score)).where(Alert.timestamp >= since)
+        avg_score = self.session.exec(avg_score_stmt).scalar() or 0.0
+
+        if dialect == "sqlite":
+            latency_expr = (
+                (func.julianday(Alert.ingested_at) - func.julianday(Alert.timestamp)) * 86400000.0
+            )
+        else:
+            latency_expr = func.extract("epoch", Alert.ingested_at - Alert.timestamp) * 1000.0
+
+        avg_latency_stmt = select(func.avg(latency_expr)).where(Alert.timestamp >= since)
+        avg_latency = self.session.exec(avg_latency_stmt).scalar() or 0.0
+
+        attack_rows = self.session.exec(
+            select(Alert.attack_type, func.count(), func.avg(Alert.model_score))
+            .where(Alert.timestamp >= since)
+            .group_by(Alert.attack_type)
+        ).all()
+        attack_type_stats = [
+            {
+                "attack_type": attack.value if hasattr(attack, "value") else attack,
+                "count": count,
+                "avg_model_score": float(avg or 0.0),
+            }
+            for attack, count, avg in attack_rows
+        ]
+
+        if dialect == "sqlite":
+            source_expr = func.json_extract(Alert.meta, "$.dataset_source")
+            label_expr = func.json_extract(Alert.meta, "$.dataset_label")
+        else:
+            source_expr = cast(Alert.meta["dataset_source"], String)
+            label_expr = cast(Alert.meta["dataset_label"], String)
+
+        dataset_rows = self.session.exec(
+            select(source_expr.label("source"), label_expr.label("label"), func.count())
+            .where(Alert.timestamp >= since)
+            .group_by(source_expr, label_expr)
+        ).all()
+        dataset_breakdown = [
+            {
+                "source": source,
+                "label": label,
+                "count": count,
+            }
+            for source, label, count in dataset_rows
+        ]
+
+        return {
+            "total_alerts": total_alerts,
+            "avg_model_score": float(avg_score or 0.0),
+            "avg_latency_ms": float(avg_latency or 0.0),
+            "attack_type_stats": attack_type_stats,
+            "dataset_breakdown": dataset_breakdown,
+        }

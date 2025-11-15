@@ -2,15 +2,19 @@ import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 
 import type { Alert, Severity } from "../api/alerts";
+import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import { FiltersBar } from "../components/FiltersBar";
 import { AlertDrawer } from "../components/AlertDrawer";
 import AlertDetailModal from "../components/alerts/AlertDetailModal";
 import { AlertRow } from "../components/AlertRow";
+import { SeverityClassificationPopover } from "../components/SeverityClassificationPopover";
+import { SeverityGuidanceCard } from "../components/SeverityGuidanceCard";
 import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { constants } from "../config/constants.js";
 import { useInterval } from "../hooks/useInterval.js";
 import { useAlertsStore } from "../store/alerts";
+import { alertsPageHelp } from "../content/contextualHelp";
 
 type Props = {
   onSelectAlert?: (alert: Alert | null) => void;
@@ -102,6 +106,10 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
             Refrescar métricas
           </button>
         </div>
+        <div className="flex items-start gap-2 text-xs text-gray-400 max-w-3xl">
+          <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+          <p>{alertsPageHelp.filters}</p>
+        </div>
 
         <FiltersBar
           filters={filters}
@@ -114,17 +122,29 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
           loading={loading}
         />
 
-        <StatsCards
-          counts={metrics?.counts_by_severity ?? null}
-          active={filters.severity.length === 1 ? (filters.severity[0] as Severity) : null}
-          onFilter={(severity) => {
-            if (severity === null) {
-              setFilters({ severity: [] });
-            } else {
-              setFilters({ severity: [severity] });
-            }
-          }}
-        />
+        <div className="space-y-4 rounded-2xl border border-white/5 bg-slate-950/30 p-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Severidad detectada por el modelo</p>
+              <p className="text-xs text-gray-400">
+                Usa estos filtros para aislar alertas por criticidad sin perder el contexto del marco NIST + CVSS.
+              </p>
+            </div>
+            <SeverityClassificationPopover />
+          </div>
+          <StatsCards
+            counts={metrics?.counts_by_severity ?? null}
+            active={filters.severity.length === 1 ? (filters.severity[0] as Severity) : null}
+            onFilter={(severity) => {
+              if (severity === null) {
+                setFilters({ severity: [] });
+              } else {
+                setFilters({ severity: [severity] });
+              }
+            }}
+          />
+          <SeverityGuidanceCard compact />
+        </div>
 
         <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl p-4">
           <p className="text-sm font-semibold text-gray-200 mb-2">Últimas 24h</p>
@@ -145,6 +165,10 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
               {loading ? "Cargando alertas..." : `${total} alertas filtradas`}
             </p>
             {error && <p className="text-sm text-red-400">{error}</p>}
+          </div>
+          <div className="flex gap-2 px-4 py-2 text-[11px] text-gray-500 border-b border-gray-800">
+            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+            <p>{alertsPageHelp.table}</p>
           </div>
           <div className="overflow-auto">
             <table data-testid="alerts-table" className="min-w-full text-left">
