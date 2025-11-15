@@ -15,6 +15,7 @@ import { formatPercent, getDisplayConfidence, getConfidenceLabel } from "../util
 import { translateSeverity } from "../utils/severity";
 
 const RANGE_OPTIONS = {
+  all: { label: "Todo", hours: null, description: "Datos acumulados" },
   "24h": { label: "Últimas 24h", hours: 24 },
   "7d": { label: "Últimos 7 días", hours: 24 * 7 },
   "30d": { label: "Últimos 30 días", hours: 24 * 30 },
@@ -35,10 +36,10 @@ const ReportsPage = () => {
   const exportCsv = useAlertsStore((state) => state.exportCsv);
   const reportRanges = useAlertsStore((state) => state.reportRanges);
   const setReportRangeData = useAlertsStore((state) => state.setReportRangeData);
-  const [rangeKey, setRangeKey] = useState("24h");
+  const [rangeKey, setRangeKey] = useState("all");
   const [downloading, setDownloading] = useState(false);
   const [summaryDownloading, setSummaryDownloading] = useState(false);
-  const [reportAlerts, setReportAlerts] = useState(reportRanges["24h"] ?? []);
+  const [reportAlerts, setReportAlerts] = useState(reportRanges["all"] ?? []);
   const [reportLoading, setReportLoading] = useState(false);
   const [rangeError, setRangeError] = useState(null);
 
@@ -59,22 +60,29 @@ const ReportsPage = () => {
   useEffect(() => {
     let cancelled = false;
     const fetchRangeAlerts = async () => {
-      const rangeStart = dayjs().subtract(selectedRange.hours, "hour");
+      const rangeHours = selectedRange.hours;
+      const rangeStart = typeof rangeHours === "number" ? dayjs().subtract(rangeHours, "hour") : null;
+      const maxPages = rangeKey === "all" ? 100 : 5;
       setReportLoading(true);
       setRangeError(null);
       try {
         const aggregated = [];
         const pageSize = 400;
         let page = 1;
-        while (page <= 5) {
+        let reachedCap = false;
+        while (true) {
           const data = await fetchAlerts({
             page,
             page_size: pageSize,
             sort: "-timestamp",
-            from_ts: rangeStart.toISOString(),
+            from_ts: rangeStart ? rangeStart.toISOString() : undefined,
           });
           aggregated.push(...data.items);
           if (data.items.length < pageSize) {
+            break;
+          }
+          if (page >= maxPages) {
+            reachedCap = true;
             break;
           }
           page += 1;
@@ -82,6 +90,9 @@ const ReportsPage = () => {
         if (!cancelled) {
           setReportAlerts(aggregated);
           setReportRangeData(rangeKey, aggregated);
+          if (reachedCap) {
+            setRangeError("La muestra se truncó al máximo permitido. Aplica un rango más acotado para más detalle.");
+          }
         }
       } catch (error) {
         console.error("No se pudo cargar el rango", error);
@@ -153,9 +164,11 @@ const ReportsPage = () => {
 
   const tableRows = useMemo(
     () =>
-      rangeAlerts.slice(0, 15).map((alert) => ({
+      rangeAlerts.slice(0, 20).map((alert) => ({
         ...alert,
         timestampLabel: dayjs(alert.timestamp).format("DD MMM HH:mm"),
+        ipSummary: `${alert.src_ip}:${alert.src_port} → ${alert.dst_ip}:${alert.dst_port}`,
+        confidenceValue: getDisplayConfidence(alert.model_score, alert.model_label),
       })),
     [rangeAlerts],
   );
@@ -269,6 +282,7 @@ const ReportsPage = () => {
           title="Rangos disponibles"
           description="Cada botón aplica una ventana relativa hacia atrás desde ahora."
         >
+          <p>Todo: sin filtro temporal (muestra el histórico completo).</p>
           <p>24h: últimas 24 horas. 7d: acumulado de la última semana. 30d: último mes.</p>
           <p className="text-xs text-gray-400">
             Puedes combinarlo con filtros manuales (fechas en el panel de Alertas) si necesitas un rango específico.
@@ -377,9 +391,10 @@ const ReportsPage = () => {
               <tr className="text-left text-gray-400">
                 <th className="py-2 pr-4 font-medium">Fecha</th>
                 <th className="py-2 pr-4 font-medium">Severidad</th>
-                <th className="py-2 pr-4 font-medium">Ataque</th>
-                <th className="py-2 pr-4 font-medium">Regla</th>
-                <th className="py-2 font-medium">Confianza del modelo</th>
+                <th className="py-2 pr-4 font-medium">Tipo</th>
+                <th className="py-2 pr-4 font-medium">IPs</th>
+                <th className="py-2 pr-4 font-medium">Protocolo</th>
+                <th className="py-2 font-medium">Regla / Score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800 text-gray-200">
@@ -391,15 +406,16 @@ const ReportsPage = () => {
                   </td>
                   <td className="py-3 pr-4">
                     <span className="px-2 py-1 rounded-full bg-gray-800 text-xs border border-gray-700">
-                      {row.attack}
+                      {row.attack_type}
                     </span>
                   </td>
-                  <td className="py-3 pr-4 truncate max-w-xs">{row.rule}</td>
-                  <td className="py-3 font-semibold">
-                    {formatPercent(getDisplayConfidence(row.model_score, row.model_label))}{" "}
-                    <span className="text-[11px] text-gray-400">
-                      ({getConfidenceLabel(row.model_label)})
-                    </span>
+                  <td className="py-3 pr-4 text-xs text-gray-300">{row.ipSummary}</td>
+                  <td className="py-3 pr-4 text-xs uppercase text-gray-400">{row.protocol}</td>
+                  <td className="py-3 pr-4">
+                    <p className="truncate text-sm font-semibold text-white">{row.rule_name}</p>
+                    <p className="text-xs text-gray-400">
+                      {formatPercent(row.confidenceValue)} ({getConfidenceLabel(row.model_label)})
+                    </p>
                   </td>
                 </tr>
               ))}
