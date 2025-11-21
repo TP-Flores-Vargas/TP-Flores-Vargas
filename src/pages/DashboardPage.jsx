@@ -29,30 +29,28 @@ const severityRank = {
 };
 
 const ServerStatusIndicator = ({ status, causes, onNavigateAlerts, helperCopy, onCauseClick }) => {
-  const HealthIcon = status.icon;
   return (
     <Card className="relative overflow-hidden text-white border border-white/10">
       <div className={`absolute inset-0 ${status.color}`} aria-hidden />
-      <div className="relative flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
+      <div className="relative flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
             <p className="text-sm font-medium opacity-80">Estado de la Red</p>
-            <InfoTooltip content={helperCopy} align="right">
-              <button
-                type="button"
-                className="rounded-full border border-white/20 bg-black/20 p-1 text-white/80 hover:text-white"
-                aria-label="Descripción del estado de la red"
-              >
-                <HelpCircleIcon className="w-4 h-4" aria-hidden />
-              </button>
-            </InfoTooltip>
+            <p className="text-2xl font-bold">{status.text}</p>
+            <p className="text-[11px] opacity-75 mt-1">{status.helper}</p>
           </div>
-          <p className="text-2xl font-bold">{status.text}</p>
-          <p className="text-[11px] opacity-75 mt-1">{status.helper}</p>
+          <InfoTooltip content={helperCopy} align="right">
+            <button
+              type="button"
+              className="rounded-full border border-white/20 bg-black/20 p-1 text-white/80 hover:text-white"
+              aria-label="Descripción del estado de la red"
+            >
+              <HelpCircleIcon className="w-4 h-4" aria-hidden />
+            </button>
+          </InfoTooltip>
         </div>
-        <HealthIcon className="w-10 h-10 opacity-70" />
       </div>
-      {causes.length > 0 && (
+      {false && causes.length > 0 && (
         <div className="relative mt-4 space-y-2 text-sm bg-black/30 rounded-lg p-3">
           <p className="text-xs uppercase tracking-wide opacity-80">Causas recientes</p>
           {causes.map((alert) => (
@@ -147,6 +145,7 @@ const DashboardPage = ({ onNavigate }) => {
   const alertsToday = dashboardMetrics?.alerts_today ?? 0;
   const totalAlerts = dashboardMetrics?.total_alerts ?? alerts.length;
   const severitySnapshot =
+    metrics?.total_counts_by_severity ??
     dashboardMetrics?.severity_last24h ??
     metrics?.counts_by_severity ??
     null;
@@ -175,20 +174,20 @@ const DashboardPage = ({ onNavigate }) => {
         text: "Alerta Crítica",
         color: "bg-red-600/80",
         icon: XCircleIcon,
-        helper: `${severitySnapshot.Critical} incidentes críticos / 24h · ${helperSuffix}`,
+        helper: `${severitySnapshot.Critical} incidentes críticos registrados · ${helperSuffix}`,
       };
     if (severitySnapshot.High > 0)
       return {
         text: "Actividad Sospechosa",
         color: "bg-yellow-600/80",
         icon: AlertTriangleIcon,
-        helper: `${severitySnapshot.High} alertas de severidad alta / 24h · ${helperSuffix}`,
+        helper: `${severitySnapshot.High} alertas de severidad alta registradas · ${helperSuffix}`,
       };
     return {
       text: "Red Segura",
       color: "bg-green-600/80",
       icon: CheckCircleIcon,
-      helper: `Sin incidentes graves en 24h · ${helperSuffix}`,
+      helper: `Sin incidentes graves recientes · ${helperSuffix}`,
     };
   }, [severitySnapshot, latestAlertText, lastActivity]);
 
@@ -333,13 +332,14 @@ const DashboardPage = ({ onNavigate }) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        <Card className="xl:col-span-2">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
+        <Card className="xl:col-span-2 h-full flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Actividad Últimas 24h</h2>
             <p className="text-xs text-gray-500 uppercase trackingwide">serie temporal</p>
           </div>
           <TimeSeriesMini
+            chartHeightClass="h-64 xl:h-80"
             series={last24hSeries}
             onSelectRange={({ from, to }) =>
               applyFiltersAndNavigate({
@@ -349,9 +349,9 @@ const DashboardPage = ({ onNavigate }) => {
             }
           />
         </Card>
-        <Card>
+        <Card className="h-full flex flex-col">
           <h2 className="text-lg font-semibold text-white mb-4">Alertas Recientes</h2>
-          <ul className="space-y-3">
+          <ul className="space-y-3 flex-1">
             {recentAlerts.map((alert) => (
               <li key={alert.id}>
                 <button

@@ -6,7 +6,7 @@ from typing import Iterable, Sequence
 from sqlalchemy import String, cast, func, literal, select
 from sqlmodel import Session
 
-from ..models import Alert
+from ..models import Alert, ModelLabelEnum
 from ..schemas import AlertCreate, AlertFilters
 
 SORT_MAP = {
@@ -59,6 +59,13 @@ class AlertRepository:
             )
         return stmt
 
+    def _apply_time_window(self, stmt, since: datetime | None, until: datetime | None):
+        if since is not None:
+            stmt = stmt.where(Alert.timestamp >= since)
+        if until is not None:
+            stmt = stmt.where(Alert.timestamp <= until)
+        return stmt
+
     def list(self, filters: AlertFilters):
         stmt = select(Alert)
         stmt = self._apply_filters(stmt, filters)
@@ -78,20 +85,18 @@ class AlertRepository:
         for alert in self.session.exec(stmt).scalars():
             yield alert
 
-    def counts_by_severity(self, since: datetime | None = None):
+    def counts_by_severity(self, since: datetime | None = None, until: datetime | None = None):
         stmt = select(Alert.severity, func.count()).group_by(Alert.severity)
-        if since is not None:
-            stmt = stmt.where(Alert.timestamp >= since)
+        stmt = self._apply_time_window(stmt, since, until)
         rows = self.session.exec(stmt).all()
         return {
             (severity.value if hasattr(severity, "value") else severity): count
             for severity, count in rows
         }
 
-    def counts_by_attack_type(self, since: datetime | None = None):
+    def counts_by_attack_type(self, since: datetime | None = None, until: datetime | None = None):
         stmt = select(Alert.attack_type, func.count()).group_by(Alert.attack_type)
-        if since is not None:
-            stmt = stmt.where(Alert.timestamp >= since)
+        stmt = self._apply_time_window(stmt, since, until)
         rows = self.session.exec(stmt).all()
         return {
             (attack.value if hasattr(attack, "value") else attack): count
@@ -133,8 +138,34 @@ class AlertRepository:
         stmt = select(func.count()).select_from(Alert)
         return self.session.exec(stmt).scalar() or 0
 
+    def count_between(self, since: datetime | None = None, until: datetime | None = None) -> int:
+        stmt = select(func.count()).select_from(Alert)
+        stmt = self._apply_time_window(stmt, since, until)
+        return self.session.exec(stmt).scalar() or 0
+
     def count_since(self, since: datetime) -> int:
-        stmt = select(func.count()).select_from(Alert).where(Alert.timestamp >= since)
+        return self.count_between(since, None)
+
+    def top_rules(self, since: datetime | None = None, until: datetime | None = None, limit: int = 5):
+        stmt = select(Alert.rule_name, func.count()).group_by(Alert.rule_name)
+        stmt = self._apply_time_window(stmt, since, until)
+        stmt = stmt.order_by(func.count().desc()).limit(limit)
+        return self.session.exec(stmt).all()
+
+    def average_score(self, since: datetime | None = None, until: datetime | None = None) -> float:
+        stmt = select(func.avg(Alert.model_score))
+        stmt = self._apply_time_window(stmt, since, until)
+        result = self.session.exec(stmt).scalar()
+        return float(result or 0.0)
+
+    def count_malicious(self, since: datetime | None = None, until: datetime | None = None) -> int:
+        stmt = select(func.count()).where(Alert.model_label == ModelLabelEnum.malicious)
+        stmt = self._apply_time_window(stmt, since, until)
+        return self.session.exec(stmt).scalar() or 0
+
+    def unique_src_ip_count(self, since: datetime | None = None, until: datetime | None = None) -> int:
+        stmt = select(func.count(func.distinct(Alert.src_ip)))
+        stmt = self._apply_time_window(stmt, since, until)
         return self.session.exec(stmt).scalar() or 0
 
     def latest_timestamp(self) -> datetime | None:

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     synthetic_autostart: bool = False
     replay_speed: float = 1.0
     stream_mode: str = "SSE"
-    model_path: str = "artifacts/CICIDS2017_multiclass_RF_ML.pkl"
+    model_path: str = "artifacts/rf_cicids2017_zeek_multiclass.pkl"
     zeek_conn_path: str | None = "data/default_csv/conn_latest.csv"
     zeek_seed_limit: int = 500
     zeek_upload_dir: str = "./tmp/zeek_uploads"
@@ -37,7 +37,11 @@ class Settings(BaseSettings):
     db_max_overflow: int = 40
     db_pool_timeout: int = 30
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        protected_namespaces=("settings_",),
+    )
 
     @field_validator("allow_origins", mode="before")
     @classmethod

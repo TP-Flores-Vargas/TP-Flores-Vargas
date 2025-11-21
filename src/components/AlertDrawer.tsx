@@ -110,7 +110,7 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
   return (
     <aside
       data-testid="alert-drawer"
-      className="w-[420px] bg-slate-900 border-l border-gray-700/70 h-full p-6 flex flex-col gap-4"
+      className="w-[420px] bg-slate-900 border-l border-gray-700/70 h-full p-6 flex flex-col gap-4 overflow-y-auto"
     >
       <div className="flex items-center justify-between gap-4 pb-2 border-b border-gray-800">
         <div>
@@ -123,7 +123,7 @@ export const AlertDrawer = ({ alert, onClose }: Props) => {
         <SeverityBadge value={alert.severity} />
       </div>
 
-      <section>
+      <section className="flex-1 min-h-0">
         <h3 className="text-sm font-semibold text-gray-300 mb-2">Resumen del incidente</h3>
         <p className="text-sm text-gray-400 leading-relaxed">{summary}</p>
       </section>

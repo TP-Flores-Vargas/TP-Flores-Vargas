@@ -10,7 +10,7 @@ from .config import get_settings
 from .db import SessionLocal, init_db
 from .dependencies import get_alerts_service, stream_manager
 from .repositories.alerts_repo import AlertRepository
-from .routers import alerts, metrics, stream, zeek_lab
+from .routers import alerts, metrics, reports, stream, zeek_lab
 from .services.alerts_service import AlertsService
 from .services.generators.synthetic_generator import SyntheticAlertGenerator
 from .services.model_provider import get_model_adapter
@@ -31,6 +31,7 @@ app.include_router(alerts.router)
 app.include_router(metrics.router)
 app.include_router(stream.router)
 app.include_router(zeek_lab.router)
+app.include_router(reports.router)
 
 
 @app.get("/health")

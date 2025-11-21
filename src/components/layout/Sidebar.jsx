@@ -1,6 +1,7 @@
 import { LogOutIcon, ShieldIcon } from "../../assets/icons/index.jsx";
 import { constants } from "../../config/constants.js";
 import { navigationItems } from "../../routes/navigation.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const Sidebar = ({
   page,
@@ -12,6 +13,10 @@ const Sidebar = ({
   setMobileOpen,
 }) => {
   const widthClass = collapsed ? "w-20" : "w-64";
+  const { user } = useAuth();
+  const allowedItems = navigationItems.filter(
+    (item) => !item.requiresAdmin || user?.role === "admin",
+  );
 
   const handleNavigate = (id) => {
     setPage(id);
@@ -56,7 +61,7 @@ const Sidebar = ({
           </button>
         </div>
         <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
-          {navigationItems.map((item) => {
+          {allowedItems.map((item) => {
             const isActive = page === item.id;
             const ItemIcon = item.icon;
             return (
@@ -84,9 +89,6 @@ const Sidebar = ({
             <LogOutIcon className="w-5 h-5" />
             {!collapsed && <span className="font-medium">Cerrar Sesión</span>}
           </button>
-          <div className="hidden lg:block mt-3 text-[11px] text-gray-500 uppercase tracking-wide">
-            Click en el escudo para {collapsed ? "expandir" : "contraer"}
-          </div>
         </div>
       </div>
     </>

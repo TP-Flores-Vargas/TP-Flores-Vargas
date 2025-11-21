@@ -7,10 +7,14 @@ interface Props {
   series: TimeSeriesBucket[];
   onSelectRange?: (payload: { from: string; to: string; bucket: TimeSeriesBucket }) => void;
   bucketMinutes?: number;
+  chartHeightClass?: string;
+  title?: string;
+  subtitle?: string;
 }
 
 const formatBucket = (bucket: string) => dayjs(bucket).format("HH:mm");
 const formatTooltip = (bucket: string) => dayjs(bucket).format("DD MMM · HH:mm");
+const formatValue = (value: number) => new Intl.NumberFormat("es-PE").format(value);
 
 const buildPath = (points: Array<{ x: number; y: number }>) =>
   points.reduce((path, point, idx) => {
@@ -18,7 +22,19 @@ const buildPath = (points: Array<{ x: number; y: number }>) =>
     return `${path} L ${point.x} ${point.y}`;
   }, "");
 
-export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Props) => {
+const calculateAxis = (max: number) => {
+  if (max === 0) return [0, 0, 0, 0];
+  return [max, Math.round(max * 0.66), Math.round(max * 0.33), 0];
+};
+
+export const TimeSeriesMini = ({
+  series,
+  onSelectRange,
+  bucketMinutes = 60,
+  chartHeightClass = "h-48",
+  title = "Evolución del tráfico",
+  subtitle = "Últimas 24h",
+}: Props) => {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const prepared = useMemo(() => {
@@ -28,15 +44,15 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
     const points = series.map((item, index) => {
       const x = index * step;
       const ratio = max === 0 ? 0 : item.count / max;
-      const eased = Math.pow(ratio, 0.65);
-      const y = 90 - (10 + eased * 80);
+      const eased = Math.pow(ratio, 0.7);
+      const y = 92 - (12 + eased * 78);
       return { x, y, value: item.count };
     });
     return { points, step, max };
   }, [series]);
 
   if (!prepared) {
-    return <p className="text-sm text-gray-400">Sin datos en las últimas 24 horas.</p>;
+    return <p className="text-sm text-gray-400">Sin datos recientes.</p>;
   }
 
   const { points, step, max } = prepared;
@@ -49,6 +65,7 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
     activeIndex = peakIndex;
   }
   const activeBucket = series[activeIndex];
+  const axisValues = calculateAxis(max);
 
   const linePath = buildPath(points);
   const areaPath = `${linePath} L 100 100 L 0 100 Z`;
@@ -66,24 +83,43 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
   const startLabel = formatBucket(series[0].bucket);
   const midLabel = formatBucket(series[Math.floor(series.length / 2)].bucket);
   const endLabel = formatBucket(series[series.length - 1].bucket);
-  const maxValue = Math.max(...series.map((item) => item.count), 1);
 
   return (
-    <div className="space-y-3">
-      <div className="relative h-44 w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900/70 to-slate-900 px-2 pt-4 pb-3">
+    <div className="space-y-3 rounded-2xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950/80 p-4 shadow-[0_15px_45px_rgba(15,23,42,0.65)]">
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-base font-semibold text-white">{title}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500">{subtitle}</p>
+        </div>
+        <div className="text-right text-[11px] text-slate-400">
+          <p className="font-semibold text-sky-300">{formatValue(activeBucket.count)}</p>
+          <p className="uppercase tracking-[0.2em] text-[9px] text-slate-500">alertas</p>
+        </div>
+      </div>
+
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-0 flex">
+          <div className="flex flex-col justify-between text-[10px] text-slate-500 pr-3">
+            {axisValues.map((value) => (
+              <span key={`axis-${value}`}>{formatValue(value)}</span>
+            ))}
+          </div>
+          <div className="flex-1 border-l border-slate-900" />
+        </div>
+
         <svg
-          className="w-full h-full"
+          className={`w-full ${chartHeightClass}`}
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           onMouseLeave={() => setHoverIndex(null)}
         >
           <defs>
             <linearGradient id="tsAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.55" />
               <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
             </linearGradient>
-            <filter id="tsGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <filter id="tsGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2.2" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
                 <feMergeNode in="SourceGraphic" />
@@ -91,14 +127,14 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
             </filter>
           </defs>
 
-          {[0, 0.5, 1].map((ratio) => (
+          {[25, 50, 75].map((ratio) => (
             <line
               key={`grid-${ratio}`}
               x1="0"
               x2="100"
-              y1={95 - ratio * 70}
-              y2={95 - ratio * 70}
-              stroke="#1f2937"
+              y1={100 - ratio}
+              y2={100 - ratio}
+              stroke="rgba(148,163,184,0.35)"
               strokeWidth="0.4"
             />
           ))}
@@ -107,9 +143,9 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
           <path
             d={linePath}
             fill="none"
-            stroke="#8b5cf6"
-            strokeOpacity="0.85"
-            strokeWidth="1.4"
+            stroke="#38bdf8"
+            strokeOpacity="0.95"
+            strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
             filter="url(#tsGlow)"
@@ -134,9 +170,9 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
               key={`circle-${series[index].bucket}`}
               cx={point.x}
               cy={point.y}
-              r={hoverIndex === index ? 2.2 : 1.2}
-              fill={hoverIndex === index ? "#f472b6" : "#c084fc"}
-              opacity={hoverIndex === index ? 1 : 0.6}
+              r={hoverIndex === index ? 2.8 : 1.4}
+              fill={hoverIndex === index ? "#fecdd3" : "#bae6fd"}
+              opacity={hoverIndex === index ? 1 : 0.7}
               pointerEvents="none"
             />
           ))}
@@ -145,33 +181,34 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
             <circle
               cx={points[activeIndex].x}
               cy={points[activeIndex].y}
-              r={3.5}
+              r={3.8}
               fill="#0f172a"
               stroke="#f472b6"
-              strokeWidth="1.1"
+              strokeWidth="1.2"
               pointerEvents="none"
               filter="url(#tsGlow)"
             />
           )}
         </svg>
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between text-[10px] text-slate-500 px-2 py-1">
-          <div className="flex justify-between">
-            <span>Pico: {max} alertas</span>
+
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between px-5 py-2 text-[10px] text-slate-400">
+          <div className="flex items-center justify-between text-slate-500">
+            <span>Pico: {formatValue(series[peakIndex].count)}</span>
             <span>
-              Última hora · {formatBucket(series[series.length - 1].bucket)} ({series[series.length - 1].count})
+              {formatBucket(series[series.length - 1].bucket)} · {series[series.length - 1].count}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+      <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
         <span>{startLabel}</span>
         <span>{midLabel}</span>
         <span>{endLabel}</span>
       </div>
 
       {activeBucket && (
-        <div className="text-xs text-gray-200 bg-slate-950/70 border border-white/5 rounded-2xl px-3 py-3 flex items-center justify-between">
+        <div className="text-xs text-gray-200 bg-slate-950/70 border border-white/5 rounded-2xl px-3 py-3 flex items-start justify-between gap-4">
           <div>
             <p className="font-semibold text-white">{formatBucket(activeBucket.bucket)}</p>
             <p className="text-gray-400">{formatTooltip(activeBucket.bucket)}</p>
@@ -194,11 +231,8 @@ export const TimeSeriesMini = ({ series, onSelectRange, bucketMinutes = 60 }: Pr
           </div>
         </div>
       )}
-
-      <div className="flex justify-between text-[10px] text-slate-500 px-1">
-        <span>0 alertas</span>
-        <span>{maxValue} alertas</span>
-      </div>
     </div>
   );
 };
+
+export default TimeSeriesMini;

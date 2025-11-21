@@ -10,7 +10,7 @@ import {
 export const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
   { id: 'alertas', label: 'Alertas', icon: BellIcon },
-  { id: 'zeek-lab', label: 'Pruebas / Zeek', icon: ActivityIcon },
+  { id: 'zeek-lab', label: 'Pruebas / Zeek', icon: ActivityIcon, requiresAdmin: true },
   { id: 'reportes', label: 'Reportes', icon: FileTextIcon },
   { id: 'configuracion', label: 'Configuración', icon: SettingsIcon },
   { id: 'ayuda', label: 'Ayuda', icon: HelpCircleIcon },

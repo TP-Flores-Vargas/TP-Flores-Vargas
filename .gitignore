@@ -12,7 +12,7 @@ __pycache__/
 # env
 .env
 
-backend/artifacts/CICIDS2017_multiclass_RF_ML.pkl
+backend/artifacts/*.pkl 
 backend/data/default_csv/conn_*.csv
 backend/data/default_csv/conn_latest.csv
 backend/alerts.db

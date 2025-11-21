@@ -78,10 +78,16 @@ class TimeSeriesBucket(BaseModel):
 class MetricsOverview(BaseModel):
     counts_by_severity: SeverityCounts
     last24h_series: List[TimeSeriesBucket]
+    total_counts_by_severity: SeverityCounts
 
 
 class AttackDistributionEntry(BaseModel):
     attack_type: str
+    count: int
+
+
+class ReportTopRule(BaseModel):
+    rule_name: str
     count: int
 
 
@@ -92,6 +98,16 @@ class DashboardMetrics(BaseModel):
     attack_distribution: List[AttackDistributionEntry]
     severity_last24h: SeverityCounts
     last24h_series: List[TimeSeriesBucket]
+
+
+class ReportsSummary(BaseModel):
+    total_alerts: int
+    severity_counts: SeverityCounts
+    attack_distribution: List[AttackDistributionEntry]
+    top_rules: List[ReportTopRule]
+    average_score: float
+    malicious_ratio: float
+    unique_sources: int
 
 
 class AttackTypeStat(BaseModel):

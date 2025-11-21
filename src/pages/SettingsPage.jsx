@@ -5,10 +5,15 @@ import Card from '../components/common/Card.jsx';
 import Input from '../components/common/Input.jsx';
 import Label from '../components/common/Label.jsx';
 import { constants } from '../config/constants.js';
+import { useAuth } from '../hooks/useAuth.js';
 
 const SettingsPage = () => {
   const [email, setEmail] = useState(constants.SUPPORT_EMAIL || 'encargado.ti@colegio.edu.pe');
   const [notification, setNotification] = useState(null);
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const { user, changePassword } = useAuth();
 
   const showNotification = (message, isError = false) => {
     setNotification({ message, isError });
@@ -34,21 +39,47 @@ const SettingsPage = () => {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              showNotification('Contraseña actualizada con éxito.');
+              if (newPass !== confirmPass) {
+                showNotification('Las contraseñas no coinciden.', true);
+                return;
+              }
+              const response = changePassword(currentPass, newPass);
+              showNotification(response.message, !response.success);
+              if (response.success) {
+                setCurrentPass('');
+                setNewPass('');
+                setConfirmPass('');
+              }
             }}
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="currentPass">Contraseña Actual</Label>
-                <Input id="currentPass" type="password" />
+                <Input
+                  id="currentPass"
+                  type="password"
+                  value={currentPass}
+                  onChange={(event) => setCurrentPass(event.target.value)}
+                  placeholder={`Usuario: ${user?.username ?? "?"}`}
+                />
               </div>
               <div>
                 <Label htmlFor="newPass">Nueva Contraseña</Label>
-                <Input id="newPass" type="password" />
+                <Input
+                  id="newPass"
+                  type="password"
+                  value={newPass}
+                  onChange={(event) => setNewPass(event.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="confirmPass">Confirmar Contraseña</Label>
-                <Input id="confirmPass" type="password" />
+                <Input
+                  id="confirmPass"
+                  type="password"
+                  value={confirmPass}
+                  onChange={(event) => setConfirmPass(event.target.value)}
+                />
               </div>
             </div>
             <div className="text-right">

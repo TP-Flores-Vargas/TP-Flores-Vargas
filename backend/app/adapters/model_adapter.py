@@ -6,31 +6,26 @@ from typing import Dict, List
 
 import joblib
 import numpy as np
+import pandas as pd
 
 from ..models import AttackTypeEnum, ModelLabelEnum
 
 
 TOP_FEATURES: List[str] = [
-    "Bwd Packet Length Max",
-    "Avg Fwd Segment Size",
-    "Fwd Packet Length Mean",
-    "Bwd Packet Length Min",
-    "PSH Flag Count",
-    "Subflow Fwd Packets",
-    "Total Length of Bwd Packets",
-    "Total Fwd Packets",
-    "act_data_pkt_fwd",
-    "Fwd Packet Length Min",
-    "Idle Min",
-    "Bwd Packets/s",
-    "Destination Port",
-    "min_seg_size_forward",
-    "Init_Win_bytes_backward",
-    "Bwd Packet Length Std",
-    "Avg Bwd Segment Size",
-    "Packet Length Mean",
-    "Min Packet Length",
-    "Bwd Packet Length Mean",
+    "duration",
+    "orig_bytes",
+    "resp_bytes",
+    "orig_pkts",
+    "resp_pkts",
+    "bytes_total",
+    "bytes_ratio",
+    "pkts_total",
+    "pkts_ratio",
+    "proto_tcp",
+    "proto_udp",
+    "proto_icmp",
+    "is_http",
+    "is_ssh",
 ]
 
 
@@ -71,15 +66,26 @@ class ModelPrediction:
 
 
 class ModelAdapter:
-    """Carga el RandomForest multiclase entrenado en CIC-IDS2017 y expone predict."""
+    """Carga el modelo multiclase entrenado para CICIDS/Zeek y expone predict."""
 
     def __init__(self, artifact_path: str | Path):
         self.artifact_path = self._resolve_path(artifact_path)
         if not self.artifact_path.exists():
             raise FileNotFoundError(f"Modelo ML no encontrado: {self.artifact_path}")
-        self.model = joblib.load(self.artifact_path)
-        if not hasattr(self.model, "predict_proba"):
+        loaded = joblib.load(self.artifact_path)
+        self.feature_names = TOP_FEATURES.copy()
+        if isinstance(loaded, dict):
+            estimator = loaded.get("model")
+            if estimator is None:
+                raise ValueError("El artefacto no contiene la clave 'model'.")
+            feature_list = loaded.get("features")
+            if feature_list:
+                self.feature_names = [str(name) for name in feature_list]
+        else:
+            estimator = loaded
+        if not hasattr(estimator, "predict_proba"):
             raise ValueError("El modelo cargado no implementa predict_proba().")
+        self.model = estimator
 
     def _resolve_path(self, raw_path: str | Path) -> Path:
         path = Path(raw_path)
@@ -100,9 +106,9 @@ class ModelAdapter:
 
         return path.resolve()
 
-    def _vectorize(self, features: Dict[str, float]) -> np.ndarray:
-        ordered = [float(features.get(name, 0.0) or 0.0) for name in TOP_FEATURES]
-        return np.asarray([ordered], dtype=float)
+    def _vectorize(self, features: Dict[str, float]):
+        row = {name: float(features.get(name, 0.0) or 0.0) for name in self.feature_names}
+        return pd.DataFrame([row], columns=self.feature_names)
 
     def predict(self, features: Dict[str, float]) -> ModelPrediction:
         vector = self._vectorize(features)

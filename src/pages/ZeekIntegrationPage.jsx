@@ -116,7 +116,7 @@ const ZeekIntegrationPage = () => {
     setDatasetError("");
     try {
       const data = await uploadZeekDataset(file);
-      setDatasetInfo({ ...data, filename: file.name });
+      setDatasetInfo({ ...data, filename: file.name, source: "uploaded" });
     } catch (error) {
       console.error("uploadZeekDataset failed", error);
       setDatasetInfo(null);
@@ -262,6 +262,70 @@ const ZeekIntegrationPage = () => {
 
       <Card>
         <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Generador de datos sintéticos</h2>
+            <p className="text-sm text-gray-400">
+              Mantén vivo el flujo de alertas mock basado en el generador interno. Puedes activarlo o detenerlo sin
+              reiniciar el backend.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
+            <p>{zeekLabHelp.syntheticGenerator}</p>
+          </div>
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="flex flex-col gap-2 text-sm">
+              Rate (alertas/min)
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={syntheticRate}
+                onChange={(event) => setSyntheticRate(Number(event.target.value) || 1)}
+                className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleSyntheticToggle(true)}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
+                disabled={syntheticLoading || syntheticStatus?.enabled}
+              >
+                {syntheticLoading && syntheticStatus?.enabled === false ? "Activando…" : "Activar"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSyntheticToggle(false)}
+                className="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-500 text-sm font-semibold"
+                disabled={syntheticLoading || !syntheticStatus?.enabled}
+              >
+                {syntheticLoading && syntheticStatus?.enabled ? "Deteniendo…" : "Detener"}
+              </button>
+              <button
+                type="button"
+                onClick={handleRefreshSynthetic}
+                className="px-4 py-2 rounded-lg border border-gray-600 text-sm"
+                disabled={syntheticLoading}
+              >
+                Actualizar estado
+              </button>
+            </div>
+          </div>
+          {syntheticStatus ? (
+            <p className="text-sm text-gray-300">
+              Estado actual: <span className={syntheticStatus.enabled ? "text-green-400" : "text-red-400"}>{syntheticStatus.enabled ? "Activo" : "Detenido"}</span>
+              {" "}· rate {syntheticStatus.rate_per_min} alertas/min · modo base {syntheticStatus.ingestion_mode}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400">Consultando estado del generador…</p>
+          )}
+          {syntheticError && <p className="text-sm text-red-400">{syntheticError}</p>}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold">Datasets disponibles</h2>
@@ -330,70 +394,6 @@ const ZeekIntegrationPage = () => {
       <Card>
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Generador de datos sintéticos</h2>
-            <p className="text-sm text-gray-400">
-              Mantén vivo el flujo de alertas mock basado en el generador interno. Puedes activarlo o detenerlo sin
-              reiniciar el backend.
-            </p>
-          </div>
-          <div className="flex items-start gap-2 text-xs text-gray-400">
-            <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
-            <p>{zeekLabHelp.syntheticGenerator}</p>
-          </div>
-          <div className="flex flex-wrap items-end gap-4">
-            <label className="flex flex-col gap-2 text-sm">
-              Rate (alertas/min)
-              <input
-                type="number"
-                min={1}
-                max={120}
-                value={syntheticRate}
-                onChange={(event) => setSyntheticRate(Number(event.target.value) || 1)}
-                className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2"
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleSyntheticToggle(true)}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
-                disabled={syntheticLoading || syntheticStatus?.enabled}
-              >
-                {syntheticLoading && syntheticStatus?.enabled === false ? "Activando…" : "Activar"}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSyntheticToggle(false)}
-                className="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-500 text-sm font-semibold"
-                disabled={syntheticLoading || !syntheticStatus?.enabled}
-              >
-                {syntheticLoading && syntheticStatus?.enabled ? "Deteniendo…" : "Detener"}
-              </button>
-              <button
-                type="button"
-                onClick={handleRefreshSynthetic}
-                className="px-4 py-2 rounded-lg border border-gray-600 text-sm"
-                disabled={syntheticLoading}
-              >
-                Actualizar estado
-              </button>
-            </div>
-          </div>
-          {syntheticStatus ? (
-            <p className="text-sm text-gray-300">
-              Estado actual: <span className={syntheticStatus.enabled ? "text-green-400" : "text-red-400"}>{syntheticStatus.enabled ? "Activo" : "Detenido"}</span>
-              {" "}· rate {syntheticStatus.rate_per_min} alertas/min · modo base {syntheticStatus.ingestion_mode}
-            </p>
-          ) : (
-            <p className="text-sm text-gray-400">Consultando estado del generador…</p>
-          )}
-          {syntheticError && <p className="text-sm text-red-400">{syntheticError}</p>}
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex flex-col gap-4">
-          <div>
             <h2 className="text-xl font-semibold">Simulación de alertas</h2>
             <p className="text-sm text-gray-400">
               Genera alertas de prueba usando el dataset activo. Puedes forzar un tipo de ataque o dejar que el modelo decida.
@@ -444,7 +444,7 @@ const ZeekIntegrationPage = () => {
                 className="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={simulateLoading || !datasetInfo}
               >
-                {simulateLoading ? "Generando…" : datasetInfo ? "Simular alerta" : "Selecciona un dataset"}
+                {simulateLoading ? "Generando…" : datasetInfo ? "Simular alerta" : "Generar alerta"}
               </button>
             </div>
           </div>
@@ -469,6 +469,22 @@ const ZeekIntegrationPage = () => {
                       {formatPercent(getDisplayConfidence(alert.model_score ?? 0, alert.model_label ?? "benign"))}{" "}
                       {getConfidenceLabel(alert.model_label ?? "benign")} · regla {alert.rule_name ?? "N/A"}
                     </p>
+                    {alert?.meta?.model?.probabilities && (
+                      <div className="mt-2 text-xs text-gray-300 space-y-1">
+                        <p className="text-gray-400">Probabilidades por clase:</p>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                          {Object.entries(alert.meta.model.probabilities).map(([label, prob]) => (
+                            <div
+                              key={`${alert.id}-${label}`}
+                              className="px-2 py-1 rounded bg-gray-900/40 border border-gray-800"
+                            >
+                              <span className="font-semibold">{label}:</span>{" "}
+                              <span>{formatPercent(prob)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

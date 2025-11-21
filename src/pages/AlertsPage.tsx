@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Alert, Severity } from "../api/alerts";
 import { HelpCircleIcon } from "../assets/icons/index.jsx";
@@ -45,6 +45,7 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
   } = useAlertsStore();
 
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const clearedInitialDateRange = useRef(false);
   const [isDesktop, setIsDesktop] = useState(
     typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
   );
@@ -62,6 +63,15 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
   useEffect(() => {
     refreshMetrics();
   }, []);
+
+  // Evita que un rango de fechas viejo (aplicado antes) reduzca el total al reentrar desde otra pestaña.
+  useEffect(() => {
+    if (clearedInitialDateRange.current) return;
+    if (filters.from_ts || filters.to_ts) {
+      setFilters({ from_ts: null, to_ts: null });
+    }
+    clearedInitialDateRange.current = true;
+  }, [filters.from_ts, filters.to_ts, setFilters]);
 
   useInterval(() => {
     loadAlerts();
@@ -96,15 +106,15 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-400 uppercase">Centro de Alertas IDS</p>
-            <h1 className="text-3xl font-bold text-white">Alertas en Tiempo Real</h1>
+            <h1 className="text-3xl font-bold text-white">Alertas</h1>
           </div>
-          <button
+          {/* <button
             type="button"
             onClick={refreshMetrics}
             className="text-sm text-sky-400 underline"
           >
             Refrescar métricas
-          </button>
+          </button> */}
         </div>
         <div className="flex items-start gap-2 text-xs text-gray-400 max-w-3xl">
           <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
@@ -133,19 +143,27 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
             <SeverityClassificationPopover />
           </div>
           <StatsCards
-            counts={metrics?.counts_by_severity ?? null}
+            counts={metrics?.total_counts_by_severity ?? metrics?.counts_by_severity ?? null}
             active={filters.severity.length === 1 ? (filters.severity[0] as Severity) : null}
             onFilter={(severity) => {
               if (severity === null) {
-                setFilters({ severity: [] });
+                setFilters({
+                  severity: [],
+                  from_ts: null,
+                  to_ts: null,
+                });
               } else {
-                setFilters({ severity: [severity] });
+                setFilters({
+                  severity: [severity],
+                  from_ts: null,
+                  to_ts: null,
+                });
               }
             }}
           />
         </div>
 
-        <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl p-4">
+        {/* <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl p-4">
           <p className="text-sm font-semibold text-gray-200 mb-2">Últimas 24h</p>
           <TimeSeriesMini
             series={metrics?.last24h_series ?? []}
@@ -156,7 +174,7 @@ export const AlertsPage = ({ onSelectAlert }: Props = {}) => {
               })
             }
           />
-        </div>
+        </div> */}
 
         <div className="bg-slate-900/70 border border-gray-800/70 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">

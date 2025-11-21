@@ -111,9 +111,10 @@ Este script detecta el motor configurado en `DATABASE_URL`: si es SQLite elimina
 ### Ingesta desde Zeek + modelo CICIDS
 - Habilita `INGESTION_MODE=ZEEK_CSV` en `backend/.env` para poblar la BD a partir de un `conn.log` exportado a CSV.
 - Variables soporte:
-  - `MODEL_PATH` → ruta al artefacto `CICIDS2017_multiclass_RF_ML.pkl` (por defecto `artifacts/CICIDS2017_multiclass_RF_ML.pkl` dentro de `backend/`).
+  - `MODEL_PATH` → ruta al artefacto `rf_cicids2017_zeek_multiclass.pkl` (por defecto `artifacts/rf_cicids2017_zeek_multiclass.pkl` dentro de `backend/`).
   - `ZEEK_CONN_PATH` → archivo por defecto que usará el simulador (por defecto `backend/data/default_csv/conn_latest.csv`; el script automático mantiene un symlink/archivo siempre actualizado). También puedes apuntarlo a cualquier CSV en formato Zeek `conn` con cabecera `#fields,...`.
   - `ZEEK_SEED_LIMIT` → número máximo de filas a ingerir (>=1). Usa `0` u omite para leer todo el archivo.
+- **Bridge de características y Zeek híbrido:** ejecuta `scripts/cicflow_stats.zeek` junto a Zeek para producir `cicflow.log` con métricas inspiradas en CICFlowMeter (promedios, std, conteos PSH, idle, etc.) alineadas a las TOP-20 features del RF. El módulo `backend/app/services/feature_bridge.py` puede leer ese log, mapear cada fila al vector exacto del modelo, aplicar el scaler (`ModelArtifacts`) y exponer `predict_from_cicflow_row`. Puedes reutilizarlo desde tareas batch (pandas) o dentro del backend cuando quieras validar flujo por flujo.
 - Laboratorio Web: la pestaña **Pruebas / Integración Zeek** (frontend) consume los nuevos endpoints de FastAPI para:
   - Subir CSVs (`POST /zeek-lab/upload-dataset`) y obtener vista previa/validación (`GET /zeek-lab/dataset-preview`).
   - Simular alertas aplicando el modelo real (`POST /zeek-lab/simulate-alert`).
@@ -140,6 +141,24 @@ Variables adicionales relacionadas:
 > 2. Copia la clave pública: `ssh-copy-id -i ~/.ssh/<alias_vm>.pub usuario@IP_VM`.
 > 3. En `backend/.env` apunta `KALI_SSH_KEY_PATH` (o un script) a la clave privada (`/home/<tu_usuario>/.ssh/<alias_vm>`).
 > 4. Reinicia `./start.sh`. Desde la UI los comandos aparecerán como `mode ssh`.
+
+#### Validar contra el dataset original (CICIDS2017)
+Para reutilizar las mismas filas que entrenaron el modelo se agregó `tools/cicids_to_conn.py`, que convierte los CSV de **MachineLearningCVE/CICIDS2017** al formato `conn*.csv` que consume Zeek:
+
+1. Descarga el dataset desde [UNB](https://www.unb.ca/cic/datasets/ids-2017.html) o desde Kaggle y descomprímelo (ej. `~/datasets/MachineLearningCVE`).
+2. Ejecuta el conversor apuntando a la carpeta (o a un CSV puntual):
+   ```bash
+   python3 tools/cicids_to_conn.py \
+     --input "~/datasets/MachineLearningCVE" \
+     --output backend/data/default_csv/cicids2017_reference.csv \
+     --dataset-name CICIDS2017_FULL --overwrite
+   ```
+   - Usa `--limit 50000` si querés generar una muestra reducida.
+   - El script es *streaming* (no carga todo en memoria), agrega columnas `cicids_label` y `cicids_attack`, y normaliza timestamp/IP/puertos/protocolo para cumplir con los requisitos del laboratorio (`ts`, `uid`, `id.orig_*`, `duration`, `orig/resp_bytes`, etc.).
+3. Actualiza `.env` con `ZEEK_REFERENCE_DATASET=backend/data/default_csv/cicids2017_reference.csv` (o apunta `ZEEK_CONN_PATH` a ese mismo archivo) y reinicia el backend.
+4. En la pestaña **Pruebas / Integración Zeek** elige “Dataset de referencia” y pulsa “Simular alerta” para comparar las predicciones del modelo contra las etiquetas originales (`cicids_label`).
+
+El parámetro `--input` acepta archivos individuales, carpetas completas o patrones glob (`data/CICIDS2017/*.csv`). También imprime un conteo del número de filas convertidas/omitidas para que puedas verificar que todo el dataset quedó cubierto.
 
 #### Flujo sugerido para una VM Zeek remota
 Si Zeek corre en otra VM (por ejemplo Ubuntu 24.04 en `192.168.23.128`), instala Zeek + ZeekControl (el método `zeekctl`) para que realmente escuche en una interfaz y genere `/opt/zeek/logs/current/conn.log`. Asegúrate de:

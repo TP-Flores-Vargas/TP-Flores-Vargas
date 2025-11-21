@@ -22,6 +22,9 @@ from ..schemas import (
     DashboardMetrics,
     MetricsOverview,
     ModelPerformanceMetrics,
+    ReportsSummary,
+    ReportTopRule,
+    SeverityCounts,
     TimeSeriesBucket,
 )
 
@@ -167,6 +170,7 @@ class AlertsService:
             "High": counts.get("High", 0),
             "Critical": counts.get("Critical", 0),
         }
+        totals = self.repository.counts_by_severity()
         series_raw = [
             TimeSeriesBucket(**entry) if not isinstance(entry, TimeSeriesBucket) else entry
             for entry in self.repository.last24h_series()
@@ -174,6 +178,7 @@ class AlertsService:
         result = MetricsOverview(
             counts_by_severity=payload,
             last24h_series=series_raw,
+            total_counts_by_severity=totals,
         )
         self._set_cache("overview", result)
         return result
@@ -202,6 +207,33 @@ class AlertsService:
         )
         self._set_cache("dashboard", result)
         return result
+
+    def reports_summary(self, from_ts: datetime | None = None, to_ts: datetime | None = None) -> ReportsSummary:
+        total_alerts = self.repository.count_between(from_ts, to_ts)
+        severity_counts = self.repository.counts_by_severity(from_ts, to_ts)
+        attack_counts = self.repository.counts_by_attack_type(from_ts, to_ts)
+        top_rules_raw = self.repository.top_rules(from_ts, to_ts)
+        average_score = self.repository.average_score(from_ts, to_ts)
+        malicious_count = self.repository.count_malicious(from_ts, to_ts)
+        unique_sources = self.repository.unique_src_ip_count(from_ts, to_ts)
+        distribution = [
+            AttackDistributionEntry(attack_type=key, count=value)
+            for key, value in sorted(attack_counts.items(), key=lambda item: item[1], reverse=True)
+        ]
+        return ReportsSummary(
+            total_alerts=total_alerts,
+            severity_counts=SeverityCounts(
+                Low=severity_counts.get("Low", 0),
+                Medium=severity_counts.get("Medium", 0),
+                High=severity_counts.get("High", 0),
+                Critical=severity_counts.get("Critical", 0),
+            ),
+            attack_distribution=distribution,
+            top_rules=[ReportTopRule(rule_name=rule, count=count) for rule, count in top_rules_raw],
+            average_score=float(average_score),
+            malicious_ratio=(malicious_count / total_alerts * 100) if total_alerts else 0.0,
+            unique_sources=unique_sources,
+        )
 
     def model_performance_metrics(self, window_hours: int = 24) -> ModelPerformanceMetrics:
         window_hours = max(1, min(window_hours, 168))

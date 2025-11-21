@@ -70,6 +70,18 @@ def test_metrics_overview_structure():
     data = resp.json()
     assert "counts_by_severity" in data
     assert "last24h_series" in data
+    assert "total_counts_by_severity" in data
+
+
+def test_reports_summary_structure():
+    client.post("/alerts", json=sample_alert_payload(rule_id="REPORTS-1"))
+    resp = client.get("/reports/summary")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "severity_counts" in data
+    assert "attack_distribution" in data
+    assert "top_rules" in data
+    assert "total_alerts" in data
 
 
 @pytest.mark.anyio

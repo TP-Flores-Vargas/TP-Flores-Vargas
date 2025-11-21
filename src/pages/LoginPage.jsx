@@ -4,21 +4,19 @@ import { ShieldIcon } from '../assets/icons/index.jsx';
 import Button from '../components/common/Button.jsx';
 import Input from '../components/common/Input.jsx';
 import Label from '../components/common/Label.jsx';
-import { useAuth } from '../hooks/useAuth.js';
 
 const LoginPage = ({ onLogin }) => {
-  const auth = useAuth();
-  const [email, setEmail] = useState('admin@colegio.edu.pe');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin');
   const [error, setError] = useState('');
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (email === 'admin@colegio.edu.pe' && password === 'admin123') {
-      (auth?.login || onLogin)?.();
-    } else {
-      setError('Usuario o contraseña incorrectos.');
+    const result = onLogin?.(username, password);
+    if (result?.success) {
+      return;
     }
+    setError(result?.message || 'Usuario o contraseña incorrectos.');
   };
 
   return (
@@ -35,13 +33,13 @@ const LoginPage = ({ onLogin }) => {
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <Label htmlFor="email">Correo institucional</Label>
+            <Label htmlFor="username">Usuario</Label>
             <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="admin@colegio.edu.pe"
+              id="username"
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="admin"
             />
           </div>
           <div>

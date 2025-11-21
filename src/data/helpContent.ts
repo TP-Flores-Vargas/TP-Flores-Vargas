@@ -57,23 +57,23 @@ export const glossary = [
 
 export const faqItems = [
   {
-    question: "¿Cómo elijo el dataset correcto en el laboratorio?",
+    question: "¿Qué significan los niveles de alerta?",
     answer:
-      "Si quieres validar ataques específicos, usa el dataset de referencia. Si buscas reproducir tráfico real, usa el dataset sincronizado desde Zeek o sube tu CSV. El dataset activo es el que consume la simulación de alertas.",
+      "Crítica significa que algo está dañando o puede detener el servicio y hay que actuar ya. Alta indica riesgo claro de intrusión y debe atenderse en la misma hora. Media es actividad sospechosa que conviene revisar en el turno. Baja suele ser tráfico conocido o de prueba, se deja registrado sin urgencia.",
   },
   {
-    question: "¿Qué diferencia hay entre riesgo y confianza en el modelo?",
+    question: "¿Qué información debo revisar primero?",
     answer:
-      "Riesgo medio representa la probabilidad de ataque (0% = benigno, 100% = ataque). En las tablas mostramos también 'Confianza en benigno' para que sea más intuitivo; ambos valores provienen del mismo score del modelo CICIDS.",
+      "Empieza por la tarjeta de estado y la gráfica de las últimas 24h: si suben las alertas críticas o altas, filtra la tabla por esos niveles. Al abrir una alerta revisa origen/destino, la regla que se activó y la hora para saber a qué servicio impacta.",
   },
   {
-    question: "¿Cómo interpreto el panel 'Actividad últimas 24h'?",
+    question: "¿Cómo priorizo si hay muchas alertas?",
     answer:
-      "La gráfica muestra las alertas por hora con línea fluorescente. Al pasar el cursor sobre un punto verás cuántas alertas se registraron y podrás filtrar la tabla para esa hora.",
+      "Usa los filtros de severidad y tipo de ataque para quedarte con las críticas y altas. Luego agrupa por origen o destino para ver si provienen del mismo lugar y descarga el reporte rápido si debes escalarlo al equipo.",
   },
   {
-    question: "¿Qué significa 'Forzar sincronización' en la pestaña Zeek?",
+    question: "¿Qué hago si creo que es un falso positivo?",
     answer:
-      "Ejecuta el script `sync_zeek_and_simulate.sh` para copiar el último `conn.log` desde Zeek y generar alertas. Úsalo después de reiniciar la VM o cuando quieras refrescar el dataset sincronizado.",
+      "Comprueba si la IP o el dominio ya son conocidos y si el tráfico coincide con tareas habituales (copias, actualizaciones). Si todo luce normal, marca la alerta como revisada y comenta por qué, para que el resto del equipo lo sepa.",
   },
 ];

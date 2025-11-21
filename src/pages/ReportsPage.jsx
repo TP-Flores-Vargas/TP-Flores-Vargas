@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 
-import { fetchAlerts } from "../api/alerts";
+import { fetchAlerts, fetchReportsSummary } from "../api/alerts";
 import Card from "../components/common/Card.jsx";
 import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import { SeverityBadge } from "../components/SeverityBadge";
@@ -15,13 +15,21 @@ import { formatPercent, getDisplayConfidence, getConfidenceLabel } from "../util
 import { translateSeverity } from "../utils/severity";
 
 const RANGE_OPTIONS = {
-  all: { label: "Todo", hours: null, description: "Datos acumulados" },
+  "1h": { label: "Última hora", hours: 1 },
   "24h": { label: "Últimas 24h", hours: 24 },
   "7d": { label: "Últimos 7 días", hours: 24 * 7 },
   "30d": { label: "Últimos 30 días", hours: 24 * 30 },
 };
 
+const severityOrder = ["Critical", "High", "Medium", "Low"];
+const EMPTY_SEVERITY_COUNTS = {
+  Critical: 0,
+  High: 0,
+  Medium: 0,
+  Low: 0,
+};
 const formatNumber = (value) => new Intl.NumberFormat("es-PE").format(value);
+const TABLE_PAGE_SIZE = 20;
 
 const SectionTitle = ({ title, description }) => (
   <div className="mb-4">
@@ -30,18 +38,28 @@ const SectionTitle = ({ title, description }) => (
   </div>
 );
 
+const buildRangeParams = (hours) => {
+  const rangeStart = typeof hours === "number" ? dayjs().subtract(hours, "hour") : null;
+  return {
+    from_ts: rangeStart ? rangeStart.toISOString() : undefined,
+    to_ts: dayjs().toISOString(),
+  };
+};
+
 const ReportsPage = () => {
   const metrics = useAlertsStore((state) => state.metrics);
   const refreshMetrics = useAlertsStore((state) => state.refreshMetrics);
-  const exportCsv = useAlertsStore((state) => state.exportCsv);
-  const reportRanges = useAlertsStore((state) => state.reportRanges);
-  const setReportRangeData = useAlertsStore((state) => state.setReportRangeData);
-  const [rangeKey, setRangeKey] = useState("all");
+  const [rangeKey, setRangeKey] = useState("1h");
   const [downloading, setDownloading] = useState(false);
   const [summaryDownloading, setSummaryDownloading] = useState(false);
-  const [reportAlerts, setReportAlerts] = useState(reportRanges["all"] ?? []);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [rangeError, setRangeError] = useState(null);
+  const [reportSummary, setReportSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
+  const [reportSample, setReportSample] = useState([]);
+  const [reportTotal, setReportTotal] = useState(0);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState(null);
+  const [tablePage, setTablePage] = useState(1);
 
   useEffect(() => {
     if (!metrics) {
@@ -52,136 +70,156 @@ const ReportsPage = () => {
   const selectedRange = RANGE_OPTIONS[rangeKey];
 
   useEffect(() => {
-    if (reportRanges[rangeKey]) {
-      setReportAlerts(reportRanges[rangeKey]);
-    }
-  }, [rangeKey, reportRanges]);
+    setTablePage(1);
+  }, [rangeKey]);
 
   useEffect(() => {
     let cancelled = false;
-    const fetchRangeAlerts = async () => {
-      const rangeHours = selectedRange.hours;
-      const rangeStart = typeof rangeHours === "number" ? dayjs().subtract(rangeHours, "hour") : null;
-      const maxPages = rangeKey === "all" ? 100 : 5;
-      setReportLoading(true);
-      setRangeError(null);
+    const loadSummary = async () => {
+      setSummaryLoading(true);
+      setSummaryError(null);
+      const params = buildRangeParams(selectedRange.hours);
       try {
-        const aggregated = [];
-        const pageSize = 400;
-        let page = 1;
-        let reachedCap = false;
-        while (true) {
-          const data = await fetchAlerts({
-            page,
-            page_size: pageSize,
-            sort: "-timestamp",
-            from_ts: rangeStart ? rangeStart.toISOString() : undefined,
-          });
-          aggregated.push(...data.items);
-          if (data.items.length < pageSize) {
-            break;
-          }
-          if (page >= maxPages) {
-            reachedCap = true;
-            break;
-          }
-          page += 1;
-        }
+        const data = await fetchReportsSummary(params);
         if (!cancelled) {
-          setReportAlerts(aggregated);
-          setReportRangeData(rangeKey, aggregated);
-          if (reachedCap) {
-            setRangeError("La muestra se truncó al máximo permitido. Aplica un rango más acotado para más detalle.");
-          }
+          setReportSummary(data);
         }
       } catch (error) {
-        console.error("No se pudo cargar el rango", error);
+        console.error("fetchReportsSummary failed", error);
         if (!cancelled) {
-          setRangeError("No se pudo cargar el periodo seleccionado.");
+          setSummaryError("No se pudo cargar el resumen del periodo.");
         }
       } finally {
         if (!cancelled) {
-          setReportLoading(false);
+          setSummaryLoading(false);
         }
       }
     };
-
-    fetchRangeAlerts();
-
+    loadSummary();
     return () => {
       cancelled = true;
     };
-  }, [rangeKey, selectedRange.hours, setReportRangeData]);
+  }, [rangeKey, selectedRange.hours]);
 
-  const rangeAlerts = reportAlerts;
+  useEffect(() => {
+    let cancelled = false;
+    const loadTablePage = async () => {
+      setTableLoading(true);
+      setTableError(null);
+      const params = buildRangeParams(selectedRange.hours);
+      try {
+        const data = await fetchAlerts({
+          page: tablePage,
+          page_size: TABLE_PAGE_SIZE,
+          sort: "-timestamp",
+          from_ts: params.from_ts,
+          to_ts: params.to_ts,
+        });
+        if (!cancelled) {
+          setReportSample(data.items);
+          setReportTotal(data.total);
+        }
+      } catch (error) {
+        console.error("fetchAlerts sample failed", error);
+        if (!cancelled) {
+          setTableError("No se pudieron cargar las alertas de auditoría.");
+        }
+      } finally {
+        if (!cancelled) {
+          setTableLoading(false);
+        }
+      }
+    };
+    loadTablePage();
+    return () => {
+      cancelled = true;
+    };
+  }, [rangeKey, tablePage, selectedRange.hours]);
 
-  const severityOrder = ["Critical", "High", "Medium", "Low"];
-  const severityTotals = useMemo(
-    () =>
-      severityOrder.map((level) => ({
-        level,
-        count: rangeAlerts.filter((alert) => alert.severity === level).length,
-      })),
-    [rangeAlerts],
-  );
+  const reportSummaryCounts = reportSummary?.severity_counts ?? EMPTY_SEVERITY_COUNTS;
+  const severityTotals = severityOrder.map((level) => ({
+    level,
+    count: reportSummaryCounts[level] ?? 0,
+  }));
+  const attackDistribution = (reportSummary?.attack_distribution ?? []).map(({ attack_type, count }) => ({
+    attack: attack_type,
+    count,
+  }));
+  const topRules = (reportSummary?.top_rules ?? []).map(({ rule_name, count }) => ({
+    rule: rule_name,
+    count,
+  }));
+  const averageRisk = reportSummary?.average_score ?? 0;
+  const maliciousRatio = Math.round(reportSummary?.malicious_ratio ?? 0);
+  const uniqueSources = reportSummary?.unique_sources ?? 0;
+  const totalAlertsInPeriod = reportSummary?.total_alerts ?? reportTotal;
 
-  const attackDistribution = useMemo(() => {
-    const counts = rangeAlerts.reduce((acc, alert) => {
-      acc[alert.attack_type] = (acc[alert.attack_type] || 0) + 1;
-      return acc;
-    }, {});
-    return Object.entries(counts)
-      .map(([attack, count]) => ({ attack, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [rangeAlerts]);
+  const totalTablePages = Math.max(1, Math.ceil(reportTotal / TABLE_PAGE_SIZE));
+  useEffect(() => {
+    setTablePage((prev) => Math.min(prev, totalTablePages));
+  }, [totalTablePages]);
 
-  const topRules = useMemo(() => {
-    const counts = rangeAlerts.reduce((acc, alert) => {
-      acc[alert.rule_name] = (acc[alert.rule_name] || 0) + 1;
-      return acc;
-    }, {});
-    return Object.entries(counts)
-      .map(([rule, count]) => ({ rule, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [rangeAlerts]);
-
-  const averageRisk = useMemo(() => {
-    if (!rangeAlerts.length) return 0;
-    return rangeAlerts.reduce((sum, alert) => sum + alert.model_score, 0) / rangeAlerts.length;
-  }, [rangeAlerts]);
-
-  const maliciousRatio = useMemo(() => {
-    if (!rangeAlerts.length) return 0;
-    const malicious = rangeAlerts.filter((alert) => alert.model_label === "malicious").length;
-    return Math.round((malicious / rangeAlerts.length) * 100);
-  }, [rangeAlerts]);
-
-  const uniqueSources = useMemo(
-    () => new Set(rangeAlerts.map((alert) => alert.src_ip)).size,
-    [rangeAlerts],
-  );
+  const tableFrom = reportTotal ? (tablePage - 1) * TABLE_PAGE_SIZE + 1 : 0;
+  const tableTo = Math.min(reportTotal, tablePage * TABLE_PAGE_SIZE);
 
   const tableRows = useMemo(
     () =>
-      rangeAlerts.slice(0, 20).map((alert) => ({
+      reportSample.map((alert) => ({
         ...alert,
         timestampLabel: dayjs(alert.timestamp).format("DD MMM HH:mm"),
         ipSummary: `${alert.src_ip}:${alert.src_port} → ${alert.dst_ip}:${alert.dst_port}`,
         confidenceValue: getDisplayConfidence(alert.model_score, alert.model_label),
       })),
-    [rangeAlerts],
+    [reportSample],
   );
 
   const handleCsvDownload = async () => {
+    setDownloading(true);
     try {
-      setDownloading(true);
-      const blob = await exportCsv();
+      const params = buildRangeParams(selectedRange.hours);
+      const aggregated = [];
+      let page = 1;
+      const maxPages = 5;
+      const pageSize = rangeKey === "24h" ? 300 : 250;
+      while (true) {
+        const data = await fetchAlerts({
+          page,
+          page_size: pageSize,
+          sort: "-timestamp",
+          from_ts: params.from_ts,
+          to_ts: params.to_ts,
+        });
+        aggregated.push(...data.items);
+        if (data.items.length < pageSize) {
+          break;
+        }
+        if (page >= maxPages) {
+          break;
+        }
+        page += 1;
+      }
+      const headers = ["Fecha", "Severidad", "Tipo", "Origen", "Destino", "Protocolo", "Regla", "Score"];
+      const rows = aggregated.slice(0, 1000).map((alert) => [
+        dayjs(alert.timestamp).format("YYYY-MM-DD HH:mm:ss"),
+        alert.severity,
+        alert.attack_type,
+        `${alert.src_ip}:${alert.src_port}`,
+        `${alert.dst_ip}:${alert.dst_port}`,
+        alert.protocol,
+        alert.rule_name,
+        formatPercent(getDisplayConfidence(alert.model_score, alert.model_label)),
+      ]);
+      const csv = [headers, ...rows]
+        .map((cols) => cols.map((col) => `"${String(col).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `alerts-report-${dayjs().format("YYYYMMDD-HHmmss")}.csv`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("CSV export failed", error);
@@ -197,7 +235,7 @@ const ReportsPage = () => {
         ["Sección", "Clave", "Valor"],
         ["Resumen", "Generado", dayjs().format("YYYY-MM-DD HH:mm:ss")],
         ["Resumen", "Rango", selectedRange.label],
-        ["Resumen", "Alertas", rangeAlerts.length],
+        ["Resumen", "Alertas", totalAlertsInPeriod],
         ["Resumen", "Riesgo promedio", formatPercent(averageRisk)],
         ["Resumen", "% Maliciosas", `${maliciousRatio}%`],
         ["Resumen", "IPs Únicas", uniqueSources],
@@ -211,7 +249,9 @@ const ReportsPage = () => {
       const link = document.createElement("a");
       link.href = url;
       link.download = `alerts-summary-${dayjs().format("YYYYMMDD-HHmmss")}.csv`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } finally {
       setSummaryDownloading(false);
@@ -226,35 +266,23 @@ const ReportsPage = () => {
           <p className="text-sm text-gray-400">Análisis descargable basado en las alertas actuales.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <InfoTooltip content={reportsHelp.download}>
-            <button
-              type="button"
-              onClick={handleCsvDownload}
-              disabled={downloading}
-              className="inline-flex items-center gap-2 rounded-lg bg-sky-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
-            >
-              {downloading ? "Generando CSV..." : "Descargar CSV de alertas"}
-            </button>
-          </InfoTooltip>
-          <InfoTooltip content={reportsHelp.download}>
-            <button
-              type="button"
-              onClick={handleSummaryDownload}
-              disabled={summaryDownloading}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:text-white disabled:opacity-60"
-            >
-              {summaryDownloading ? "Compilando..." : "Descargar informe"}
-            </button>
-          </InfoTooltip>
+          <button
+            type="button"
+            onClick={handleCsvDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 rounded-lg bg-sky-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+          >
+            {downloading ? "Generando CSV..." : "Descargar CSV de alertas"}
+          </button>
+          <button
+            type="button"
+            onClick={handleSummaryDownload}
+            disabled={summaryDownloading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:text-white disabled:opacity-60"
+          >
+            {summaryDownloading ? "Compilando..." : "Descargar informe"}
+          </button>
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-        <SeverityClassificationPopover />
-        <span>Consulta el marco si necesitas justificar por qué cada ataque cae en cierto nivel.</span>
-      </div>
-      <div className="flex items-start gap-2 text-xs text-gray-400 max-w-3xl">
-        <HelpCircleIcon className="w-4 h-4 text-gray-500 mt-0.5" aria-hidden />
-        <p>{reportsHelp.summary}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -271,21 +299,20 @@ const ReportsPage = () => {
             {value.label}
           </button>
         ))}
-        {reportLoading && (
+        {summaryLoading && (
           <span className="flex items-center gap-2 text-xs text-gray-400">
             <span className="h-2 w-2 animate-ping rounded-full bg-sky-400" /> Cargando rango…
           </span>
         )}
-        {rangeError && <span className="text-xs text-red-400">{rangeError}</span>}
+        {summaryError && <span className="text-xs text-red-400">{summaryError}</span>}
         <ContextPopover
           triggerLabel="¿Cómo se calculan?"
           title="Rangos disponibles"
           description="Cada botón aplica una ventana relativa hacia atrás desde ahora."
         >
-          <p>Todo: sin filtro temporal (muestra el histórico completo).</p>
-          <p>24h: últimas 24 horas. 7d: acumulado de la última semana. 30d: último mes.</p>
+          <p>1h: última hora. 24h: últimas 24 horas. 7d: acumulado de la última semana. 30d: último mes.</p>
           <p className="text-xs text-gray-400">
-            Puedes combinarlo con filtros manuales (fechas en el panel de Alertas) si necesitas un rango específico.
+            La página usa métricas del backend para resumir el periodo y solo descarga los registros necesarios.
           </p>
         </ContextPopover>
       </div>
@@ -298,7 +325,7 @@ const ReportsPage = () => {
               <HelpCircleIcon className="w-4 h-4 text-gray-500" />
             </InfoTooltip>
           </div>
-          <p className="text-3xl font-bold text-white mt-1">{formatNumber(rangeAlerts.length)}</p>
+          <p className="text-3xl font-bold text-white mt-1">{formatNumber(totalAlertsInPeriod)}</p>
           <p className="text-xs text-gray-500 mt-1">{selectedRange.label}</p>
         </Card>
         <Card>
@@ -320,7 +347,6 @@ const ReportsPage = () => {
           <p className="text-3xl font-bold text-white mt-1">{formatNumber(uniqueSources)}</p>
         </Card>
       </div>
-
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>
@@ -419,15 +445,49 @@ const ReportsPage = () => {
                   </td>
                 </tr>
               ))}
-              {!tableRows.length && (
+              {!tableRows.length && !tableLoading && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-gray-400">
+                  <td colSpan={6} className="py-6 text-center text-gray-400">
                     No hay alertas registradas en el periodo seleccionado.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+        {tableLoading && (
+          <p className="px-4 py-2 text-xs text-gray-400">Cargando muestra de alertas…</p>
+        )}
+        {tableError && <p className="px-4 py-2 text-xs text-red-400">{tableError}</p>}
+        <div className="flex flex-col gap-2 px-4 py-3 text-xs text-gray-400 md:flex-row md:items-center md:justify-between">
+          <p>
+            {reportTotal
+              ? `Mostrando ${formatNumber(tableFrom)}-${formatNumber(tableTo)} de ${formatNumber(reportTotal)} alertas del periodo.`
+              : "No hay alertas para este periodo."}
+          </p>
+          {totalTablePages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTablePage((prev) => Math.max(1, prev - 1))}
+                disabled={tablePage === 1}
+                className="rounded px-3 py-1 border border-slate-700 bg-slate-900 text-white disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span>
+                {tablePage} / {totalTablePages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setTablePage((prev) => Math.min(totalTablePages, prev + 1))}
+                disabled={tablePage === totalTablePages}
+                className="rounded px-3 py-1 border border-slate-700 bg-slate-900 text-white disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
         </div>
       </Card>
     </div>

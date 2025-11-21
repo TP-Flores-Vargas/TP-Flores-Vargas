@@ -9,7 +9,8 @@ from ..models import AttackTypeEnum, ProtocolEnum, SeverityEnum
 from ..schemas import AlertCreate
 from ..services.alerts_service import AlertsService
 from ..services.generators.synthetic_generator import SEVERITY_FLOOR, SEVERITY_WEIGHT
-from .model_adapter import ModelAdapter, ModelPrediction, TOP_FEATURES
+from ..services.feature_bridge import build_conn_feature_vector
+from .model_adapter import ModelAdapter, ModelPrediction
 
 
 def _safe_float(value: Optional[str], default: float = 0.0) -> float:
@@ -107,57 +108,12 @@ class ZeekAdapter:
         return raw_header
 
     def _build_features(self, row: Dict[str, str]) -> Dict[str, float]:
-        orig_pkts = _safe_float(row.get("orig_pkts"))
-        resp_pkts = _safe_float(row.get("resp_pkts"))
-        orig_ip_bytes = _safe_float(row.get("orig_ip_bytes"), _safe_float(row.get("orig_bytes")))
-        resp_ip_bytes = _safe_float(row.get("resp_ip_bytes"), _safe_float(row.get("resp_bytes")))
-        duration = _safe_float(row.get("duration"))
-
-        def _per_packet(bytes_value: float, packets: float) -> float:
-            if packets <= 0:
-                return bytes_value
-            return bytes_value / packets
-
-        fwd_mean = _per_packet(orig_ip_bytes, orig_pkts)
-        bwd_mean = _per_packet(resp_ip_bytes, resp_pkts)
-
-        syn_flags = row.get("history", "").count("S")
-        psh_flags = row.get("history", "").count("P") + row.get("history", "").count("p")
-        bwd_pkts_per_s = resp_pkts / duration if duration > 0 else resp_pkts
-        avg_pkt_length = _per_packet(orig_ip_bytes + resp_ip_bytes, orig_pkts + resp_pkts)
-
-        features = {
-            "Bwd Packet Length Max": max(bwd_mean, resp_ip_bytes),
-            "Avg Fwd Segment Size": fwd_mean,
-            "Fwd Packet Length Mean": fwd_mean,
-            "Bwd Packet Length Min": bwd_mean,
-            "PSH Flag Count": float(psh_flags),
-            "Subflow Fwd Packets": orig_pkts,
-            "Total Length of Bwd Packets": resp_ip_bytes,
-            "Total Fwd Packets": orig_pkts,
-            "act_data_pkt_fwd": max(orig_pkts - syn_flags, 0.0),
-            "Fwd Packet Length Min": fwd_mean,
-            "Idle Min": duration,
-            "Bwd Packets/s": bwd_pkts_per_s,
-            "Destination Port": _safe_float(row.get("id.resp_p")),
-            "min_seg_size_forward": fwd_mean,
-            "Init_Win_bytes_backward": _safe_float(row.get("resp_bytes")),
-            "Bwd Packet Length Std": 0.0,
-            "Avg Bwd Segment Size": bwd_mean,
-            "Packet Length Mean": avg_pkt_length,
-            "Min Packet Length": min(fwd_mean or 0.0, bwd_mean or fwd_mean),
-            "Bwd Packet Length Mean": bwd_mean,
-        }
-
-        # Aseguramos que todas las features existan aunque se hayan añadido nuevas
-        for name in TOP_FEATURES:
-            features.setdefault(name, 0.0)
-        return features
+        return build_conn_feature_vector(row)
 
     def _build_alert(
         self,
         row: Dict[str, str],
-        features: Dict[str, float],
+        feature_subset: Dict[str, float],
         prediction: ModelPrediction,
     ) -> AlertCreate:
         timestamp = datetime.utcfromtimestamp(_safe_float(row.get("ts")))
@@ -175,7 +131,7 @@ class ZeekAdapter:
 
         meta = {
             "zeek_conn": row,
-            "features": features,
+            "features": feature_subset,
             "model": {
                 "probabilities": prediction.probabilities,
                 "class_index": prediction.class_index,

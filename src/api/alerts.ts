@@ -65,11 +65,27 @@ export interface TimeSeriesBucket {
 export interface MetricsOverview {
   counts_by_severity: SeverityCounts;
   last24h_series: TimeSeriesBucket[];
+  total_counts_by_severity: SeverityCounts;
 }
 
 export interface AttackDistributionEntry {
   attack_type: string;
   count: number;
+}
+
+export interface ReportTopRule {
+  rule_name: string;
+  count: number;
+}
+
+export interface ReportsSummary {
+  total_alerts: number;
+  severity_counts: SeverityCounts;
+  attack_distribution: AttackDistributionEntry[];
+  top_rules: ReportTopRule[];
+  average_score: number;
+  malicious_ratio: number;
+  unique_sources: number;
 }
 
 export interface DashboardMetrics {
@@ -143,6 +159,12 @@ export const fetchMetrics = async () => {
 
 export const fetchDashboardMetrics = async () => {
   const { data } = await apiClient.get<DashboardMetrics>("/metrics/dashboard");
+  return data;
+};
+
+export const fetchReportsSummary = async (params: { from_ts?: string; to_ts?: string }) => {
+  const query = serializeParams(params);
+  const { data } = await apiClient.get<ReportsSummary>(`/reports/summary${query ? `?${query}` : ""}`);
   return data;
 };
 

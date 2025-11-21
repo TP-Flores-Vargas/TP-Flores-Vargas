@@ -4,6 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
+from pydantic import ConfigDict
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
@@ -45,6 +46,7 @@ class ModelLabelEnum(str, enum.Enum):
 
 class Alert(SQLModel, table=True):
     __tablename__ = "alerts"
+    model_config = ConfigDict(protected_namespaces=())
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True, nullable=False)
