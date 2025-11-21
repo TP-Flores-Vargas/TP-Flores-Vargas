@@ -13,6 +13,7 @@ __pycache__/
 .env
 
 backend/artifacts/*.pkl 
+backend/tmp/zeek_uploads/*.csv
 backend/data/default_csv/conn_*.csv
 backend/data/default_csv/conn_latest.csv
 backend/alerts.db
