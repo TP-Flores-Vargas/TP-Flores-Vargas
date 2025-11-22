@@ -15,7 +15,7 @@ const sections = [
   {
     title: "Tipo de ataque",
     description:
-      "Clasificación que hace el modelo (PortScan, DDoS, BruteForce, etc.). Ayuda a entender el vector y contexto.",
+      "Clasificación que hace el modelo (Benigno, Bot, Fuerza Bruta, DDoS, DoS, Escaneo de puertos). Ayuda a entender el vector y contexto.",
   },
   {
     title: "IPs",
@@ -33,7 +33,7 @@ const ruleAndScoreCopy = [
   {
     title: "Reglas Zeek",
     description:
-      "Cada regla es una firma escrita en Zeek (por ejemplo ZEEK-CVE, ZEEK-BruteForce, Zeek BENIGN). Describe qué condición activó el evento.",
+      "Cada regla es una firma escrita en Zeek (por ejemplo ZEEK-CVE, ZEEK-BRUTE_FORCE, Zeek BENIGN). Describe qué condición activó el evento.",
     note: "Si ves nombres personalizados, provienen de tus propios scripts o del dataset sincronizado.",
   },
   {

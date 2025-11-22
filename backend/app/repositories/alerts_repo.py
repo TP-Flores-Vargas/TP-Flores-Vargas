@@ -95,11 +95,12 @@ class AlertRepository:
         }
 
     def counts_by_attack_type(self, since: datetime | None = None, until: datetime | None = None):
-        stmt = select(Alert.attack_type, func.count()).group_by(Alert.attack_type)
+        attack_expr = cast(Alert.attack_type, String)
+        stmt = select(attack_expr, func.count()).group_by(attack_expr)
         stmt = self._apply_time_window(stmt, since, until)
         rows = self.session.exec(stmt).all()
         return {
-            (attack.value if hasattr(attack, "value") else attack): count
+            (attack or "UNKNOWN"): count
             for attack, count in rows
         }
 
@@ -191,14 +192,15 @@ class AlertRepository:
         avg_latency_stmt = select(func.avg(latency_expr)).where(Alert.timestamp >= since)
         avg_latency = self.session.exec(avg_latency_stmt).scalar() or 0.0
 
+        attack_expr = cast(Alert.attack_type, String)
         attack_rows = self.session.exec(
-            select(Alert.attack_type, func.count(), func.avg(Alert.model_score))
+            select(attack_expr, func.count(), func.avg(Alert.model_score))
             .where(Alert.timestamp >= since)
-            .group_by(Alert.attack_type)
+            .group_by(attack_expr)
         ).all()
         attack_type_stats = [
             {
-                "attack_type": attack.value if hasattr(attack, "value") else attack,
+                "attack_type": attack or "UNKNOWN",
                 "count": count,
                 "avg_model_score": float(avg or 0.0),
             }

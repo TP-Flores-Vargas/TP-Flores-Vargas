@@ -22,11 +22,6 @@ CICIDS_COUNTS = {
     "DoS slowloris": 5_796,
     "DoS Slowhttptest": 5_499,
     "Bot": 1_966,
-    "Web Attack – Brute Force": 1_507,
-    "Web Attack – XSS": 652,
-    "Infiltration": 36,
-    "Web Attack – Sql Injection": 21,
-    "Heartbleed": 11,
 }
 
 LABEL_TO_ATTACK_TYPE = {
@@ -41,10 +36,10 @@ LABEL_TO_ATTACK_TYPE = {
     "DoS Slowhttptest": AttackTypeEnum.dos,
     "Bot": AttackTypeEnum.bot,
     "Web Attack – Brute Force": AttackTypeEnum.bruteforce,
-    "Web Attack – XSS": AttackTypeEnum.xss,
-    "Infiltration": AttackTypeEnum.infiltration,
-    "Web Attack – Sql Injection": AttackTypeEnum.sqli,
-    "Heartbleed": AttackTypeEnum.other,
+    "Web Attack – XSS": AttackTypeEnum.dos,
+    "Infiltration": AttackTypeEnum.dos,
+    "Web Attack – Sql Injection": AttackTypeEnum.dos,
+    "Heartbleed": AttackTypeEnum.dos,
 }
 
 ATTACK_SUMMARY = {
@@ -52,12 +47,8 @@ ATTACK_SUMMARY = {
     AttackTypeEnum.dos: "Se observó un patrón de solicitudes repetitivas que impactan la disponibilidad.",
     AttackTypeEnum.portscan: "El origen está enumerando puertos abiertos en los segmentos protegidos.",
     AttackTypeEnum.bruteforce: "Intentos masivos de autenticación fueron detectados contra servicios críticos.",
-    AttackTypeEnum.xss: "Se intentó inyectar scripts maliciosos en una aplicación web.",
-    AttackTypeEnum.sqli: "Consultas sospechosas indican un intento de inyección SQL.",
     AttackTypeEnum.bot: "Actividad compatible con malware tipo bot se detectó comunicándose con C2.",
-    AttackTypeEnum.infiltration: "Se identificó movimiento lateral y extracción de datos.",
     AttackTypeEnum.benign: "Tráfico clasificado como benigno por el modelo actual.",
-    AttackTypeEnum.other: "Actividad fuera de catálogo, revise el flujo completo.",
 }
 
 PLAYBOOKS = {
@@ -81,21 +72,6 @@ PLAYBOOKS = {
         "Bloquear temporalmente la IP origen.",
         "Obligar cambio de contraseñas afectadas y auditar accesos.",
     ],
-    AttackTypeEnum.xss: [
-        "Aplicar reglas en el WAF para bloquear payloads detectados.",
-        "Ejecutar análisis estático de la aplicación para validar sanitización.",
-        "Revisar logs de usuarios para descartar robo de sesión.",
-    ],
-    AttackTypeEnum.sqli: [
-        "Bloquear consultas con patrones similares en el WAF.",
-        "Ejecutar escaneo de seguridad en la aplicación afectada.",
-        "Validar integridad de la base de datos y activar respaldos.",
-    ],
-    AttackTypeEnum.infiltration: [
-        "Aislar completamente el host comprometido.",
-        "Recolectar artefactos forenses para DFIR.",
-        "Notificar a seguridad corporativa para contención.",
-    ],
     AttackTypeEnum.bot: [
         "Desconectar el host comprometido y ejecutar análisis antimalware.",
         "Revocar credenciales utilizadas desde el activo identificado.",
@@ -108,10 +84,7 @@ PROTOCOL_BY_ATTACK = {
     AttackTypeEnum.ddos: [ProtocolEnum.tcp, ProtocolEnum.udp, ProtocolEnum.http],
     AttackTypeEnum.portscan: [ProtocolEnum.tcp, ProtocolEnum.udp],
     AttackTypeEnum.bruteforce: [ProtocolEnum.tcp, ProtocolEnum.http, ProtocolEnum.https],
-    AttackTypeEnum.xss: [ProtocolEnum.http, ProtocolEnum.https],
-    AttackTypeEnum.sqli: [ProtocolEnum.http, ProtocolEnum.https],
     AttackTypeEnum.bot: [ProtocolEnum.tcp, ProtocolEnum.https],
-    AttackTypeEnum.infiltration: [ProtocolEnum.https, ProtocolEnum.tcp],
     AttackTypeEnum.benign: [ProtocolEnum.http, ProtocolEnum.https, ProtocolEnum.dns, ProtocolEnum.tcp],
 }
 
@@ -134,27 +107,19 @@ SEVERITY_WEIGHT = {
 SEVERITY_POLICY = {
     AttackTypeEnum.benign: SeverityEnum.low,
     AttackTypeEnum.dos: SeverityEnum.medium,
-    AttackTypeEnum.other: SeverityEnum.medium,
     AttackTypeEnum.ddos: SeverityEnum.critical,
-    AttackTypeEnum.infiltration: SeverityEnum.critical,
-    AttackTypeEnum.sqli: SeverityEnum.critical,
     AttackTypeEnum.bot: SeverityEnum.critical,
     AttackTypeEnum.bruteforce: SeverityEnum.high,
-    AttackTypeEnum.portscan: SeverityEnum.high,
-    AttackTypeEnum.xss: SeverityEnum.high,
+    AttackTypeEnum.portscan: SeverityEnum.medium,
 }
 
 SEVERITY_FLOOR = {
     AttackTypeEnum.benign: SeverityEnum.low,
-    AttackTypeEnum.portscan: SeverityEnum.high,
+    AttackTypeEnum.portscan: SeverityEnum.medium,
     AttackTypeEnum.dos: SeverityEnum.medium,
     AttackTypeEnum.ddos: SeverityEnum.critical,
     AttackTypeEnum.bruteforce: SeverityEnum.high,
-    AttackTypeEnum.xss: SeverityEnum.high,
-    AttackTypeEnum.sqli: SeverityEnum.critical,
     AttackTypeEnum.bot: SeverityEnum.critical,
-    AttackTypeEnum.infiltration: SeverityEnum.critical,
-    AttackTypeEnum.other: SeverityEnum.medium,
 }
 
 
@@ -212,8 +177,6 @@ class SyntheticAlertGenerator:
     def _port_for_attack(self, attack_type: AttackTypeEnum) -> int:
         mapping = {
             AttackTypeEnum.bruteforce: self.random.choice([21, 22, 3389, 5900]),
-            AttackTypeEnum.xss: self.random.choice([80, 443, 8080]),
-            AttackTypeEnum.sqli: self.random.choice([1433, 3306, 5432, 1521]),
             AttackTypeEnum.portscan: self.random.randint(1, 1024),
             AttackTypeEnum.ddos: self.random.choice([80, 443, 53]),
             AttackTypeEnum.dos: self.random.choice([80, 443, 22]),
@@ -230,7 +193,7 @@ class SyntheticAlertGenerator:
 
     def generate_alert(self) -> AlertCreate:
         dataset_label = self.random.choices(self.labels, weights=self.weights, k=1)[0]
-        attack_type = LABEL_TO_ATTACK_TYPE.get(dataset_label, AttackTypeEnum.other)
+        attack_type = LABEL_TO_ATTACK_TYPE.get(dataset_label, AttackTypeEnum.dos)
         src_ip = self._random_ip()
         dst_ip = self._random_ip()
         protocol = self._select_protocol(attack_type)
@@ -244,7 +207,7 @@ class SyntheticAlertGenerator:
         timestamp = datetime.utcnow() - timedelta(minutes=self.random.randint(0, 120))
         meta = {
             "dataset_label": dataset_label,
-            "summary": ATTACK_SUMMARY.get(attack_type, ATTACK_SUMMARY[AttackTypeEnum.other]),
+            "summary": ATTACK_SUMMARY.get(attack_type, ATTACK_SUMMARY[AttackTypeEnum.dos]),
             "playbook": PLAYBOOKS.get(attack_type, []),
             "generator_seed": self.seed,
         }

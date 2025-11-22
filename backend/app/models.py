@@ -17,16 +17,12 @@ class SeverityEnum(str, enum.Enum):
 
 
 class AttackTypeEnum(str, enum.Enum):
-    benign = "Benign"
-    dos = "DoS"
-    ddos = "DDoS"
-    portscan = "PortScan"
-    bruteforce = "BruteForce"
-    xss = "XSS"
-    sqli = "SQLi"
-    bot = "Bot"
-    infiltration = "Infiltration"
-    other = "Other"
+    benign = "BENIGN"
+    bot = "BOT"
+    bruteforce = "BRUTE_FORCE"
+    ddos = "DDOS"
+    dos = "DOS"
+    portscan = "PORTSCAN"
 
 
 class ProtocolEnum(str, enum.Enum):

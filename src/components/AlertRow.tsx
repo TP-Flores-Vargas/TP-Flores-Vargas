@@ -2,6 +2,7 @@ import type { Alert } from "../api/alerts";
 import { SeverityBadge } from "./SeverityBadge";
 import { getConfidenceLabel, getDisplayConfidence, formatPercent } from "../utils/modelConfidence";
 import { formatLocalTimestamp, formatUtcTimestamp } from "../utils/time";
+import { translateAttackType } from "../utils/attackType";
 
 interface Props {
   alert: Alert;
@@ -28,7 +29,7 @@ export const AlertRow = ({ alert, onSelect, highlighted, rowIndex }: Props) => {
         <div>{formatLocalTimestamp(alert.timestamp)}</div>
         <div className="text-[10px] text-gray-500">{formatUtcTimestamp(alert.timestamp)}</div>
       </td>
-      <td className="px-3 py-2 font-semibold text-gray-100">{alert.attack_type}</td>
+      <td className="px-3 py-2 font-semibold text-gray-100">{translateAttackType(alert.attack_type)}</td>
       <td className="px-3 py-2">
         <div className="font-mono text-xs text-gray-400">{alert.src_ip}</div>
         <div className="text-[11px] text-gray-500">→ {alert.dst_ip}</div>

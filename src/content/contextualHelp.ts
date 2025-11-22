@@ -1,29 +1,21 @@
 import type { AttackType, Severity } from "../api/alerts";
 
-type AttackCategory = AttackType | "WEB_ATTACK" | "HEARTBLEED";
-
 type SeverityGuideline = {
   summary: string;
   cvss: string;
   response: string;
-  attackExamples: AttackCategory[];
+  attackExamples: AttackType[];
   criteria: string;
 };
 
-const attackTypeLabels: Record<AttackCategory, string> = {
-  Benign: "BENIGN · tráfico normal o datasets de laboratorio",
-  DoS: "DOS · GoldenEye, Slowloris, Slowhttptest",
-  DDoS: "DDOS · UDP/HTTP Flood (Hulk, LOIC)",
-  PortScan: "PORTSCAN · reconocimiento de superficie",
-  BruteForce: "BRUTE_FORCE · Patator (FTP/SSH) / fuerza bruta",
-  XSS: "Web Attack · payload XSS",
-  SQLi: "Web Attack · intento SQLi",
-  Bot: "BOT · backdoor/botnet persistente",
-  Infiltration: "INFILTRATION · movimiento lateral/exfiltración",
-  Other: "Otras anomalías",
-  WEB_ATTACK: "Web Attack · incluye XSS/SQLi detectados",
-  HEARTBLEED: "Hartbleed · fuga mediante OpenSSL",
-};
+const attackTypeLabels = {
+  BENIGN: "Benigno · tráfico normal o datasets de laboratorio",
+  DOS: "DoS · GoldenEye, Slowloris, Slowhttptest",
+  DDOS: "DDoS · UDP/HTTP Flood (Hulk, LOIC)",
+  PORTSCAN: "Escaneo de puertos",
+  BRUTE_FORCE: "Fuerza bruta · Patator (FTP/SSH)",
+  BOT: "Bot · backdoor/botnet persistente",
+} satisfies Record<AttackType, string>;
 
 const severityLabels: Record<Severity, string> = {
   Critical: "Crítica",
@@ -44,7 +36,9 @@ export const severityFramework: {
   description:
     "Clasificamos cada alerta alineada al incidente handling guide de NIST SP 800-61 rev. 2 "
     + "y al rango de puntajes CVSS v3.1. El modelo entrenado con Zeek_CICIDS2017 agrupa las etiquetas del dataset "
-    + "en categorías operativas (Benign, Web Attack, Brute Force/Patator, Bot, DoS/DDoS, PortScan, Infiltration, Heartbleed/Other) "
+    + "en las clases BENIGN, BOT, BRUTE_FORCE, DDOS, DOS y PORTSCAN "
+    + "y las mapea a categorías operativas en español "
+    + "(Benigno, Bot, Fuerza Bruta, DoS/DDoS, Escaneo de puertos) "
     + "y evalúa cada flujo según métricas reales de conn.log (bytes_total, pkts_ratio, protocolos).",
   reference: "NIST SP 800-61r2 · CVSS v3.1",
   guidelines: {
@@ -54,8 +48,8 @@ export const severityFramework: {
         + "de NIST y CVSS ≥ 9.0 y se reserva para tráfico volumétrico, exfiltración o Heartbleed confirmado.",
       cvss: "CVSS ≥ 9.0",
       response: "Intervenir en <15 minutos, activar plan de respuesta.",
-      attackExamples: ["DDoS", "Infiltration", "Bot", "HEARTBLEED"],
-      criteria: "Impacto directo en disponibilidad/confidencialidad con evidencia de compromiso activo o C2 persistente.",
+      attackExamples: ["DDOS", "BOT"],
+      criteria: "Impacto directo en disponibilidad con evidencia de ataque distribuido o C2 persistente.",
     },
     High: {
       summary:
@@ -63,34 +57,34 @@ export const severityFramework: {
         + "exploit web que ya superó controles básicos. Equivale a CVSS 7.0-8.9.",
       cvss: "CVSS 7.0 – 8.9",
       response: "Mitigar en <1 hora, aislar hosts afectados.",
-      attackExamples: ["BruteForce", "WEB_ATTACK"],
-      criteria: "Alto potencial de intrusión (fuerza bruta o payloads Web Attack) con probabilidad de escalamiento.",
+      attackExamples: ["BRUTE_FORCE", "DOS"],
+      criteria: "Alto potencial de intrusión (fuerza bruta o ataques de denegación focalizados) con probabilidad de escalamiento.",
     },
     Medium: {
       summary:
         "Eventos con impacto moderado: escaneos, intentos fallidos o explotación limitada. Mapeado a CVSS 4.0-6.9.",
       cvss: "CVSS 4.0 – 6.9",
       response: "Revisar en el mismo turno y crear ticket de seguimiento.",
-      attackExamples: ["PortScan", "DoS"],
-      criteria: "Disrupción parcial o intentos que requieren seguimiento pero no hay abuso confirmado.",
+      attackExamples: ["PORTSCAN"],
+      criteria: "Reconocimiento activo o actividad que requiere seguimiento pero sin abuso confirmado.",
     },
     Low: {
       summary:
         "Tráfico conocido, ejercicios o falsos positivos que sirven como contexto. CVSS < 4 y categoría informativa.",
       cvss: "CVSS < 4.0",
       response: "Monitoreo continuo; sin acción inmediata.",
-      attackExamples: ["Benign"],
+      attackExamples: ["BENIGN"],
       criteria: "Eventos esperados, simulaciones o tráfico etiquetado como benigno por el modelo.",
     },
   },
 };
 
-const formatAttackExamples = (examples: AttackCategory[]) =>
+const formatAttackExamples = (examples: AttackType[]) =>
   examples
     .map((attack) => attackTypeLabels[attack] ?? attack)
     .join(", ");
 
-export const describeAttackExamples = (examples: AttackCategory[]) =>
+export const describeAttackExamples = (examples: AttackType[]) =>
   formatAttackExamples(examples);
 
 export const getSeverityTooltip = (level: Severity): string => {
@@ -103,65 +97,47 @@ export const getSeverityTooltip = (level: Severity): string => {
 };
 
 export type AttackSeverityEntry = {
-  attack: AttackCategory;
+  attack: AttackType;
   severity: Severity;
   rationale: string;
 };
 
 export const attackSeverityMatrix: AttackSeverityEntry[] = [
   {
-    attack: "DDoS",
+    attack: "DDOS",
     severity: "Critical",
     rationale:
       "Un DDOS volumétrico (Hulk/LOIC) satura bytes_total y pkts_total; requiere intervención inmediata.",
   },
   {
-    attack: "Bot",
+    attack: "BOT",
     severity: "Critical",
     rationale:
-      "Actividad BOT implica control remoto del atacante y amerita contención crítica.",
+      "La clase BOT implica control remoto del atacante y amerita contención crítica.",
   },
   {
-    attack: "Infiltration",
-    severity: "Critical",
-    rationale:
-      "INFILTRATION identifica movimiento lateral o exfiltración; se trata como incidente crítico.",
-  },
-  {
-    attack: "HEARTBLEED",
-    severity: "Critical",
-    rationale:
-      "Heartbleed expone memoria sensible de servidores; cualquier detección se eleva a crítico.",
-  },
-  {
-    attack: "WEB_ATTACK",
+    attack: "BRUTE_FORCE",
     severity: "High",
     rationale:
-      "WEB_ATTACK agrupa XSS/SQLi detectados en HTTP; se atienden como alertas altas para evitar acceso a datos.",
+      "La clase BRUTE_FORCE agrupa intentos Patator/fuerza bruta contra credenciales y eleva el riesgo de escalamiento.",
   },
   {
-    attack: "BruteForce",
-    severity: "High",
-    rationale:
-      "Intentos Patator / fuerza bruta contra credenciales elevan el riesgo de escalamiento; se priorizan como altos.",
-  },
-  {
-    attack: "DoS",
+    attack: "DOS",
     severity: "Medium",
     rationale:
       "Los ataques DoS (GoldenEye, Slowloris, Slowhttptest) generan disrupciones puntuales; se monitorean como severidad media.",
   },
   {
-    attack: "PortScan",
+    attack: "PORTSCAN",
     severity: "Medium",
     rationale:
-      "Los portscan elevan pkts_ratio de reconocimiento; se revisan y filtran como alertas medias.",
+      "La clase PORTSCAN refleja reconocimiento activo y eleva pkts_ratio; se revisa y filtra como alerta media.",
   },
   {
-    attack: "Benign",
+    attack: "BENIGN",
     severity: "Low",
     rationale:
-      "BENIGN corresponde a tráfico normal o datasets de laboratorio, sirve como baseline y no requiere acción inmediata.",
+      "La clase BENIGN corresponde a tráfico normal o datasets de laboratorio, sirve como baseline y no requiere acción inmediata.",
   },
 ];
 

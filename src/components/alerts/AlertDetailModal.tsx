@@ -10,65 +10,43 @@ import {
   getRiskScore,
 } from "../../utils/modelConfidence";
 import { formatFullLocal, formatLocalTimestamp, formatUtcTimestamp } from "../../utils/time";
+import { translateAttackType } from "../../utils/attackType";
 
 const PLAYBOOK_FALLBACK: Record<AttackType, string[]> = {
-  Benign: ["Registrar el evento para entrenamiento futuro.", "Verificar falsos positivos.", "No se requiere acción inmediata."],
-  DoS: [
+  BENIGN: ["Registrar el evento para entrenamiento futuro.", "Verificar falsos positivos.", "No se requiere acción inmediata."],
+  DOS: [
     "Aplicar rate limiting en el servicio impactado.",
     "Bloquear temporalmente la IP de origen.",
     "Notificar al equipo de redes si la saturación continúa.",
   ],
-  DDoS: [
+  DDOS: [
     "Activar mitigación DDoS en el borde o proveedor.",
     "Coordinar con el ISP para filtrar prefijos maliciosos.",
     "Monitorear métricas de disponibilidad cada 5 minutos.",
   ],
-  PortScan: [
+  PORTSCAN: [
     "Bloquear la IP ofensora en el firewall.",
     "Auditar servicios expuestos en el segmento escaneado.",
     "Revisar logs para intentos subsecuentes.",
   ],
-  BruteForce: [
+  BRUTE_FORCE: [
     "Habilitar MFA en los servicios atacados.",
     "Bloquear la IP origen y rotar credenciales.",
     "Revisar registros de autenticación fallida.",
   ],
-  XSS: [
-    "Aplicar reglas WAF para bloquear payloads detectados.",
-    "Validar sanitización en la aplicación objetivo.",
-    "Notificar al equipo de desarrollo para corregir inputs.",
-  ],
-  SQLi: [
-    "Bloquear patrones en WAF/IDS.",
-    "Ejecutar escaneo de seguridad en la aplicación.",
-    "Verificar integridad de la base de datos y respaldos.",
-  ],
-  Bot: [
+  BOT: [
     "Aislar el host comprometido y ejecutar análisis DFIR.",
     "Revocar credenciales utilizadas desde el dispositivo.",
     "Monitorear tráfico hacia dominios C2 relacionados.",
   ],
-  Infiltration: [
-    "Aislar el activo comprometido inmediatamente.",
-    "Coordinar con equipo forense para preservar evidencia.",
-    "Iniciar plan de respuesta a incidentes completo.",
-  ],
-  Other: [
-    "Revisar la consola de Zeek/IDS para más contexto.",
-    "Correlacionar con otras alertas del mismo origen.",
-    "Escalar al SOC si el comportamiento se repite.",
-  ],
 };
 
 const TITLE_MAP: Partial<Record<AttackType, string>> = {
-  Bot: "Malware Detectado",
-  DDoS: "Ataque Distribuido Detectado",
-  DoS: "Ataque de Denegación Detectado",
-  PortScan: "Escaneo de Puertos Detectado",
-  BruteForce: "Ataque de Fuerza Bruta",
-  XSS: "Intento de XSS",
-  SQLi: "Intento de SQL Injection",
-  Infiltration: "Infiltración Detectada",
+  BOT: "Malware detectado",
+  DDOS: "Ataque DDoS detectado",
+  DOS: "Ataque de denegación detectado",
+  PORTSCAN: "Escaneo de puertos detectado",
+  BRUTE_FORCE: "Ataque de fuerza bruta",
 };
 
 interface Props {
@@ -83,7 +61,7 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
   const actions =
     (Array.isArray(alert.meta?.playbook) && (alert.meta?.playbook as string[]).length > 0
       ? (alert.meta?.playbook as string[])
-      : PLAYBOOK_FALLBACK[alert.attack_type]) ?? PLAYBOOK_FALLBACK.Other;
+      : PLAYBOOK_FALLBACK[alert.attack_type]) ?? PLAYBOOK_FALLBACK.DOS;
 
   const modelMeta = (alert.meta?.model as Record<string, unknown>) || {};
   const probabilities = Object.entries((modelMeta as { probabilities?: Record<string, number> }).probabilities ?? {})
@@ -106,7 +84,7 @@ const AlertDetailModal = ({ alert, onClose }: Props) => {
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-400">Alerta</p>
             <h2 className="text-xl font-bold text-white">
-              {TITLE_MAP[alert.attack_type] || alert.attack_type}
+              {TITLE_MAP[alert.attack_type] || translateAttackType(alert.attack_type)}
             </h2>
             <p className="text-sm text-gray-400 mt-1">
               {formatFullLocal(alert.timestamp)} ({formatUtcTimestamp(alert.timestamp)})

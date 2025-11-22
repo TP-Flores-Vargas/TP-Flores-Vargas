@@ -111,7 +111,7 @@ Este script detecta el motor configurado en `DATABASE_URL`: si es SQLite elimina
 ### Ingesta desde Zeek + modelo CICIDS
 - Habilita `INGESTION_MODE=ZEEK_CSV` en `backend/.env` para poblar la BD a partir de un `conn.log` exportado a CSV.
 - Variables soporte:
-  - `MODEL_PATH` → ruta al artefacto `rf_cicids2017_zeek_multiclass.pkl` (por defecto `artifacts/rf_cicids2017_zeek_multiclass.pkl` dentro de `backend/`).
+  - `MODEL_PATH` → ruta al artefacto `rf_cicids2017_zeek_multiclass_v3.pkl` (por defecto `artifacts/rf_cicids2017_zeek_multiclass_v3.pkl` dentro de `backend/`).
   - `ZEEK_CONN_PATH` → archivo por defecto que usará el simulador (por defecto `backend/data/default_csv/conn_latest.csv`; el script automático mantiene un symlink/archivo siempre actualizado). También puedes apuntarlo a cualquier CSV en formato Zeek `conn` con cabecera `#fields,...`.
   - `ZEEK_SEED_LIMIT` → número máximo de filas a ingerir (>=1). Usa `0` u omite para leer todo el archivo.
 - **Bridge de características y Zeek híbrido:** ejecuta `scripts/cicflow_stats.zeek` junto a Zeek para producir `cicflow.log` con métricas inspiradas en CICFlowMeter (promedios, std, conteos PSH, idle, etc.) alineadas a las TOP-20 features del RF. El módulo `backend/app/services/feature_bridge.py` puede leer ese log, mapear cada fila al vector exacto del modelo, aplicar el scaler (`ModelArtifacts`) y exponer `predict_from_cicflow_row`. Puedes reutilizarlo desde tareas batch (pandas) o dentro del backend cuando quieras validar flujo por flujo.

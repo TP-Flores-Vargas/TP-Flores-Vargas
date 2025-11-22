@@ -1,21 +1,9 @@
 export const glossary = [
   {
-    term: "DDoS (Distributed Denial of Service)",
+    term: "DDoS (Denegación de servicio distribuida)",
     description:
-      "Ataque coordinado que satura un servicio con tráfico desde múltiples orígenes. Nuestro modelo lo clasifica como severidad crítica porque interrumpe operaciones completas.",
+      "Ataque coordinado que satura un servicio con tráfico desde múltiples orígenes. Se clasifica como crítica porque interrumpe operaciones completas.",
     actions: ["Activar mitigación en el borde", "Coordinar con el ISP para filtrar IPs maliciosas"],
-  },
-  {
-    term: "Infiltration",
-    description:
-      "Movimiento lateral o exfiltración detectada dentro de la red. Se considera crítico ya que implica compromiso del entorno.",
-    actions: ["Aislar el host afectado", "Preservar evidencia para DFIR"],
-  },
-  {
-    term: "SQL Injection",
-    description:
-      "Intentos de ejecutar comandos maliciosos en bases de datos a través de formularios web. El modelo lo marca como crítico por el riesgo de fuga de datos.",
-    actions: ["Aplicar reglas WAF", "Revisar la sanitización de la app"],
   },
   {
     term: "Bot / Backdoor",
@@ -24,31 +12,25 @@ export const glossary = [
     actions: ["Desconectar el host", "Revocar credenciales utilizadas"],
   },
   {
-    term: "BruteForce",
+    term: "BRUTE_FORCE",
     description:
       "Intentos masivos de autenticación para romper credenciales. El modelo lo clasifica como severidad alta.",
     actions: ["Habilitar MFA", "Bloquear IP ofensora"],
   },
   {
-    term: "PortScan",
+    term: "Escaneo de puertos",
     description:
       "Enumeración agresiva de puertos abiertos. Indica preparación de ataque, por eso se marca como alerta alta.",
     actions: ["Bloquear IP fuente", "Revisar exposición de servicios"],
   },
   {
-    term: "XSS",
-    description:
-      "Inyección de scripts en aplicaciones web para robar sesiones. También se marca como alta.",
-    actions: ["Configurar WAF", "Validar inputs en la aplicación"],
-  },
-  {
-    term: "DoS",
+    term: "DOS",
     description:
       "Denegación de servicio puntual que afecta a un servicio específico. Se clasifica como severidad media.",
     actions: ["Aplicar rate limiting", "Monitorear si escala a DDoS"],
   },
   {
-    term: "Benign",
+    term: "Benigno",
     description:
       "Tráfico de referencia o datasets de laboratorio. Sirve como baseline y se marca como severidad baja.",
     actions: ["No requiere intervención, sólo se registra"],

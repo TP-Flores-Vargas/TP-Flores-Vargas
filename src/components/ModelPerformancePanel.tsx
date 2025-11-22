@@ -3,6 +3,7 @@ import { HelpCircleIcon } from "../assets/icons/index.jsx";
 import { InfoTooltip } from "./InfoTooltip";
 import { ContextPopover } from "./ContextPopover";
 import { formatPercent } from "../utils/modelConfidence";
+import { translateAttackType } from "../utils/attackType";
 
 interface InfoMetricProps {
   label: string;
@@ -141,7 +142,9 @@ export const ModelPerformancePanel = ({ data, error }: Props) => {
             {data.attack_type_stats.map((entry) => (
               <div key={entry.attack_type} className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white font-medium">{entry.attack_type}</p>
+                  <p className="text-sm text-white font-medium">
+                    {translateAttackType(entry.attack_type)}
+                  </p>
               <p className="text-xs text-gray-500">
                 {formatPercent(entry.avg_model_score)} riesgo medio
               </p>

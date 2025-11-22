@@ -11,6 +11,7 @@ import { StatsCards } from "../components/StatsCards";
 import { TimeSeriesMini } from "../components/TimeSeriesMini";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { translateSeverity } from "../utils/severity";
+import { translateAttackType } from "../utils/attackType";
 import { constants } from "../config/constants.js";
 import { useInterval } from "../hooks/useInterval.js";
 import { defaultFilters, useAlertsStore } from "../store/alerts";
@@ -69,7 +70,7 @@ const ServerStatusIndicator = ({ status, causes, onNavigateAlerts, helperCopy, o
               }
             >
               <div className="flex flex-col text-sm text-white/90">
-                <span className="font-semibold">{alert.attack_type}</span>
+                <span className="font-semibold">{translateAttackType(alert.attack_type)}</span>
                 <span className="text-xs text-gray-300">{alert.rule_name}</span>
                 <span className="text-[11px] text-gray-400">
                   {translateSeverity(alert.severity)} · {dayjs(alert.timestamp).fromNow()}
@@ -364,7 +365,9 @@ const DashboardPage = ({ onNavigate }) => {
                 >
                   <div className="flex flex-col text-left gap-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-white">{alert.attack_type}</p>
+                      <p className="font-semibold text-white">
+                        {translateAttackType(alert.attack_type)}
+                      </p>
                       <SeverityBadge value={alert.severity} />
                     </div>
                     <p className="text-xs text-gray-400">Regla: {alert.rule_name}</p>

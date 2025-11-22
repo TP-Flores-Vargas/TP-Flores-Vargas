@@ -2,16 +2,12 @@ import { apiClient, serializeParams } from "./client";
 
 export type Severity = "Low" | "Medium" | "High" | "Critical";
 export type AttackType =
-  | "Benign"
-  | "DoS"
-  | "DDoS"
-  | "PortScan"
-  | "BruteForce"
-  | "XSS"
-  | "SQLi"
-  | "Bot"
-  | "Infiltration"
-  | "Other";
+  | "BENIGN"
+  | "BOT"
+  | "BRUTE_FORCE"
+  | "DDOS"
+  | "DOS"
+  | "PORTSCAN";
 export type Protocol = "TCP" | "UDP" | "ICMP" | "HTTP" | "HTTPS" | "DNS" | "Other";
 
 export interface Alert {

@@ -31,27 +31,21 @@ TOP_FEATURES: List[str] = [
 
 CLASS_ID_TO_NAME = {
     0: "BENIGN",
-    1: "Bot",
-    2: "Brute Force",
-    3: "DDoS",
-    4: "DoS",
-    5: "Heartbleed",
-    6: "Infiltration",
-    7: "Port Scan",
-    8: "Web Attack",
+    1: "BOT",
+    2: "BRUTE_FORCE",
+    3: "DDOS",
+    4: "DOS",
+    5: "PORTSCAN",
 }
 
 
 CLASS_NAME_TO_ATTACK = {
     "BENIGN": AttackTypeEnum.benign,
-    "Bot": AttackTypeEnum.bot,
-    "Brute Force": AttackTypeEnum.bruteforce,
-    "DDoS": AttackTypeEnum.ddos,
-    "DoS": AttackTypeEnum.dos,
-    "Heartbleed": AttackTypeEnum.other,
-    "Infiltration": AttackTypeEnum.infiltration,
-    "Port Scan": AttackTypeEnum.portscan,
-    "Web Attack": AttackTypeEnum.xss,
+    "BOT": AttackTypeEnum.bot,
+    "BRUTE_FORCE": AttackTypeEnum.bruteforce,
+    "DDOS": AttackTypeEnum.ddos,
+    "DOS": AttackTypeEnum.dos,
+    "PORTSCAN": AttackTypeEnum.portscan,
 }
 
 
@@ -115,7 +109,7 @@ class ModelAdapter:
         probabilities = self.model.predict_proba(vector)[0]
         predicted_idx = int(np.argmax(probabilities))
         class_name = CLASS_ID_TO_NAME.get(predicted_idx, str(predicted_idx))
-        attack_type = CLASS_NAME_TO_ATTACK.get(class_name, AttackTypeEnum.other)
+        attack_type = CLASS_NAME_TO_ATTACK.get(class_name, AttackTypeEnum.dos)
         prob_map = {
             CLASS_ID_TO_NAME.get(idx, str(idx)): float(prob)
             for idx, prob in enumerate(probabilities)

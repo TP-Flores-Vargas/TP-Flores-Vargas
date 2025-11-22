@@ -155,18 +155,16 @@ class ZeekAdapter:
         )
 
     def _map_severity(self, score: float, attack_type: AttackTypeEnum) -> SeverityEnum:
-        if score >= 0.9 or attack_type in (AttackTypeEnum.infiltration, AttackTypeEnum.other):
+        if score >= 0.9:
             base = SeverityEnum.critical
         elif score >= 0.75 or attack_type in (
             AttackTypeEnum.dos,
             AttackTypeEnum.ddos,
             AttackTypeEnum.bruteforce,
             AttackTypeEnum.bot,
-            AttackTypeEnum.xss,
-            AttackTypeEnum.sqli,
         ):
             base = SeverityEnum.high
-        elif score >= 0.4:
+        elif score >= 0.4 or attack_type == AttackTypeEnum.portscan:
             base = SeverityEnum.medium
         else:
             base = SeverityEnum.low

@@ -26,18 +26,23 @@ interface Props {
 
 const severityOptions: Severity[] = ["Low", "Medium", "High", "Critical"];
 const attackOptions: AttackType[] = [
-  "Benign",
-  "DoS",
-  "DDoS",
-  "PortScan",
-  "BruteForce",
-  "XSS",
-  "SQLi",
-  "Bot",
-  "Infiltration",
-  "Other",
+  "BENIGN",
+  "BOT",
+  "BRUTE_FORCE",
+  "DDOS",
+  "DOS",
+  "PORTSCAN",
 ];
 const protocolOptions: Protocol[] = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "DNS", "Other"];
+const attackLabels: Record<AttackType, string> = {
+  BENIGN: "Benigno",
+  BOT: "Bot",
+  BRUTE_FORCE: "Fuerza bruta",
+  DDOS: "DDoS",
+  DOS: "DoS",
+  PORTSCAN: "Escaneo de puertos",
+};
+const formatAttackLabel = (value: string) => attackLabels[value as AttackType] ?? value.replace(/_/g, " ");
 
 export const FiltersBar = ({
   filters,
@@ -184,7 +189,7 @@ export const FiltersBar = ({
           {renderToggleGroup("Severidad", severityOptions, "severity", (value) => translateSeverity(value as Severity))}
 
           <div className="grid gap-4 md:grid-cols-2">
-            {renderToggleGroup("Tipo de ataque", attackOptions, "attack_type")}
+            {renderToggleGroup("Tipo de ataque", attackOptions, "attack_type", formatAttackLabel)}
             {renderToggleGroup("Protocolo", protocolOptions, "protocol")}
           </div>
 

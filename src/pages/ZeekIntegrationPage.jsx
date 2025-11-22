@@ -19,16 +19,12 @@ import { InfoTooltip } from "../components/InfoTooltip";
 
 const ATTACK_TYPE_OPTIONS = [
   { value: "", label: "Cualquier tipo (según modelo)" },
-  { value: "Benign", label: "Benign" },
-  { value: "Bot", label: "Bot" },
-  { value: "BruteForce", label: "Brute Force" },
-  { value: "DoS", label: "DoS" },
-  { value: "DDoS", label: "DDoS" },
-  { value: "PortScan", label: "Port Scan" },
-  { value: "XSS", label: "Web Attack / XSS" },
-  { value: "SQLi", label: "Web Attack / SQLi" },
-  { value: "Infiltration", label: "Infiltration" },
-  { value: "Other", label: "Otro" },
+  { value: "BENIGN", label: "Benigno" },
+  { value: "BOT", label: "Bot" },
+  { value: "BRUTE_FORCE", label: "Fuerza bruta" },
+  { value: "DDOS", label: "DDOS" },
+  { value: "DOS", label: "DOS" },
+  { value: "PORTSCAN", label: "Escaneo de puertos" },
 ];
 
 const renderPreviewTable = (columns = [], rows = []) => {

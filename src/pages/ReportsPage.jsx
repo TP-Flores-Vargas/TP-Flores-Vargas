@@ -13,6 +13,7 @@ import { useAlertsStore } from "../store/alerts";
 import { reportsHelp } from "../content/contextualHelp";
 import { formatPercent, getDisplayConfidence, getConfidenceLabel } from "../utils/modelConfidence";
 import { translateSeverity } from "../utils/severity";
+import { translateAttackType } from "../utils/attackType";
 
 const RANGE_OPTIONS = {
   "1h": { label: "Última hora", hours: 1 },
@@ -143,6 +144,7 @@ const ReportsPage = () => {
   }));
   const attackDistribution = (reportSummary?.attack_distribution ?? []).map(({ attack_type, count }) => ({
     attack: attack_type,
+    label: translateAttackType(attack_type),
     count,
   }));
   const topRules = (reportSummary?.top_rules ?? []).map(({ rule_name, count }) => ({
@@ -166,6 +168,7 @@ const ReportsPage = () => {
     () =>
       reportSample.map((alert) => ({
         ...alert,
+        attack_label: translateAttackType(alert.attack_type),
         timestampLabel: dayjs(alert.timestamp).format("DD MMM HH:mm"),
         ipSummary: `${alert.src_ip}:${alert.src_port} → ${alert.dst_ip}:${alert.dst_port}`,
         confidenceValue: getDisplayConfidence(alert.model_score, alert.model_label),
@@ -241,7 +244,9 @@ const ReportsPage = () => {
         ["Resumen", "IPs Únicas", uniqueSources],
       ];
       severityTotals.forEach(({ level, count }) => rows.push(["Severidad", level, count]));
-      attackDistribution.slice(0, 5).forEach(({ attack, count }) => rows.push(["Ataques", attack, count]));
+      attackDistribution
+        .slice(0, 5)
+        .forEach(({ label, count }) => rows.push(["Ataques", label, count]));
       topRules.forEach(({ rule, count }) => rows.push(["Reglas", rule, count]));
       const csv = rows.map((cols) => cols.map((col) => `"${String(col).replace(/"/g, '""')}"`).join(",")).join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -382,9 +387,9 @@ const ReportsPage = () => {
         <Card>
           <SectionTitle title="Principales tipos de ataque" description="Top 5 por volumen en el periodo." />
           <ul className="space-y-3">
-            {attackDistribution.slice(0, 5).map(({ attack, count }) => (
+            {attackDistribution.slice(0, 5).map(({ attack, label, count }) => (
               <li key={attack} className="flex items-center justify-between text-sm text-gray-300">
-                <span className="px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700 text-xs">{attack}</span>
+                <span className="px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700 text-xs">{label}</span>
                 <span className="font-semibold text-white">{count}</span>
               </li>
             ))}
@@ -432,7 +437,7 @@ const ReportsPage = () => {
                   </td>
                   <td className="py-3 pr-4">
                     <span className="px-2 py-1 rounded-full bg-gray-800 text-xs border border-gray-700">
-                      {row.attack_type}
+                      {row.attack_label}
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-xs text-gray-300">{row.ipSummary}</td>

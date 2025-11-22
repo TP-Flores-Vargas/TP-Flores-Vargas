@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     synthetic_autostart: bool = False
     replay_speed: float = 1.0
     stream_mode: str = "SSE"
-    model_path: str = "artifacts/rf_cicids2017_zeek_multiclass.pkl"
+    model_path: str = "artifacts/rf_cicids2017_zeek_multiclass_v3.pkl"
     zeek_conn_path: str | None = "data/default_csv/conn_latest.csv"
     zeek_seed_limit: int = 500
     zeek_upload_dir: str = "./tmp/zeek_uploads"

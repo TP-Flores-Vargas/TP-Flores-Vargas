@@ -79,7 +79,7 @@ class DatasetPreviewResponse(BaseModel):
 class SimulateRequest(BaseModel):
     dataset_id: str | None = None
     use_default: bool = False
-    attack_type: str | None = Field(default=None, description="Ej: Benign, Bot, BruteForce…")
+    attack_type: str | None = Field(default=None, description="Ej: BENIGN, DOS, DDOS, BRUTE_FORCE…")
     count: int = Field(default=1, ge=1, le=50)
 
 
@@ -309,9 +309,10 @@ def _validate_columns(columns: List[str], dataset_type: str) -> None:
 def _attack_type_from_str(value: str | None) -> AttackTypeEnum | None:
     if not value:
         return None
-    normalized = value.strip().lower()
+    normalized = value.strip().lower().replace("_", "").replace(" ", "")
     for attack in AttackTypeEnum:
-        if attack.value.lower() == normalized:
+        candidate = attack.value.lower().replace("_", "")
+        if candidate == normalized:
             return attack
     raise HTTPException(status_code=400, detail=f"Tipo de alerta desconocido: {value}")
 
