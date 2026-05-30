@@ -17,4 +17,4 @@ backend/tmp/zeek_uploads/*.csv
 backend/data/default_csv/conn_*.csv
 backend/data/default_csv/conn_latest.csv
 backend/alerts.db
-.zeek_sync_state
+.zeek_sync_state.codex
