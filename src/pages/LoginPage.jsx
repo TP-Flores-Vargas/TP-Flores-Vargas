@@ -43,7 +43,9 @@ const LoginPage = ({ onLogin }) => {
               type="text"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="admin"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
             />
           </div>
           <div>
@@ -53,7 +55,7 @@ const LoginPage = ({ onLogin }) => {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="********"
+              autoComplete="current-password"
             />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
