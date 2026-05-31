@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlmodel import SQLModel, Session, create_engine
 
 os.environ["INGESTION_MODE"] = "TEST_DISABLED"
+os.environ["DATABASE_URL"] = "sqlite://"
 
 from app.db import get_session
 from app.main import app
@@ -31,7 +32,7 @@ def sample_alert_payload(**kwargs):
     base = {
         "timestamp": datetime.utcnow().isoformat(),
         "severity": "High",
-        "attack_type": "DoS",
+        "attack_type": "DOS",
         "src_ip": "10.0.0.10",
         "src_port": 4444,
         "dst_ip": "192.168.0.2",
@@ -55,13 +56,13 @@ def test_post_alert_creates_entry():
 
 
 def test_get_alerts_with_filters():
-    payload = sample_alert_payload(rule_id="RULE-2001", attack_type="PortScan", severity="Medium")
+    payload = sample_alert_payload(rule_id="RULE-2001", attack_type="PORTSCAN", severity="Medium")
     client.post("/alerts", json=payload)
-    resp = client.get("/alerts", params={"attack_type": "PortScan", "severity": "Medium"})
+    resp = client.get("/alerts", params={"attack_type": "PORTSCAN", "severity": "Medium"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] >= 1
-    assert any(item["attack_type"] == "PortScan" for item in body["items"])
+    assert any(item["attack_type"] == "PORTSCAN" for item in body["items"])
 
 
 def test_metrics_overview_structure():

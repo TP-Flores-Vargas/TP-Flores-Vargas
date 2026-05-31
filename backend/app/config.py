@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     zeek_upload_dir: str = "./tmp/zeek_uploads"
     zeek_reference_dataset: str = "data/default_csv/attacks_reference.csv"
     zeek_sync_script: str | None = "../sync_zeek_and_simulate.sh"
+    auth_secret: str = "dev-only-change-me"
+    auth_token_ttl_hours: int = 168
+    seed_admin_username: str = "admin"
+    seed_admin_password: str = "admin"
+    seed_admin_display_name: str = "Administrador"
+    seed_user_username: str = "user"
+    seed_user_password: str = "user"
+    seed_user_display_name: str = "Usuario"
     kali_ssh_host: str | None = None
     kali_ssh_user: str | None = None
     kali_ssh_port: int = 22

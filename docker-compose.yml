@@ -29,6 +29,12 @@ services:
     environment:
       - UVICORN_WORKERS=1
       - DATABASE_URL=postgresql+psycopg://ids:ids@db:5432/ids
+      - INGESTION_MODE=${INGESTION_MODE:-SYNTHETIC_SEED}
+      - SYNTHETIC_SEED_COUNT=${SYNTHETIC_SEED_COUNT:-300}
+      - SYNTHETIC_AUTOSTART=${SYNTHETIC_AUTOSTART:-true}
+      - SYNTHETIC_RATE_PER_MIN=${SYNTHETIC_RATE_PER_MIN:-4}
+      - STREAM_MODE=${STREAM_MODE:-SSE}
+      - AUTH_SECRET=${AUTH_SECRET:-dev-only-change-me}
     networks:
       - ids-net
     depends_on:

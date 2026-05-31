@@ -10,8 +10,10 @@ from .config import get_settings
 from .db import SessionLocal, init_db
 from .dependencies import get_alerts_service, stream_manager
 from .repositories.alerts_repo import AlertRepository
-from .routers import alerts, metrics, reports, stream, zeek_lab
+from .repositories.users_repo import UserRepository
+from .routers import alerts, auth, metrics, reports, stream, zeek_lab
 from .services.alerts_service import AlertsService
+from .services.auth_service import AuthService
 from .services.generators.synthetic_generator import SyntheticAlertGenerator
 from .services.model_provider import get_model_adapter
 from .services.synthetic_control import start_synthetic_emitter, stop_synthetic_emitter
@@ -28,6 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(alerts.router)
+app.include_router(auth.router)
 app.include_router(metrics.router)
 app.include_router(stream.router)
 app.include_router(zeek_lab.router)
@@ -46,6 +49,8 @@ async def startup_event():
         app.state.zeek_datasets = {}
     if not hasattr(app.state, "synthetic_generator"):
         app.state.synthetic_generator = SyntheticAlertGenerator(seed=settings.synthetic_seed)
+    with SessionLocal() as session:
+        AuthService(UserRepository(session)).ensure_default_users()
     app.state.synthetic_rate = getattr(app.state, "synthetic_rate", settings.synthetic_rate_per_min)
     ingestion_mode = settings.ingestion_mode.upper()
     if ingestion_mode.startswith("SYNTHETIC"):

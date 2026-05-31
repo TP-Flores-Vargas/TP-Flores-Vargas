@@ -16,6 +16,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY artifacts ./artifacts
+COPY data ./data
 
 RUN groupadd -r app && useradd -r -g app app && chown -R app:app /app
 USER app

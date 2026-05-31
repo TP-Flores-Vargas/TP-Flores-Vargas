@@ -1,70 +1,113 @@
-import { createContext, useCallback, useMemo, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  changePasswordRequest,
+  fetchCurrentUser,
+  loginRequest,
+  logoutRequest,
+  updateNotificationSettings,
+} from "../api/auth";
+import { getStoredAuthToken, setStoredAuthToken } from "../api/client";
 
 export const AuthContext = createContext(null);
 
-const INITIAL_USERS = {
-  admin: { username: 'admin', password: 'admin', role: 'admin', displayName: 'Administrador' },
-  user: { username: 'user', password: 'user', role: 'user', displayName: 'Operador' },
-};
-
 export const AuthProvider = ({ children }) => {
-  const [users, setUsers] = useState(INITIAL_USERS);
-  const [currentUsername, setCurrentUsername] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const user = useMemo(() => {
-    if (!currentUsername) return null;
-    const record = users[currentUsername];
-    if (!record) return null;
-    const { password, ...rest } = record;
-    return { ...rest };
-  }, [currentUsername, users]);
+  useEffect(() => {
+    let active = true;
 
-  const isAuthenticated = Boolean(currentUsername);
-
-  const login = useCallback(
-    (username, password) => {
-      const trimmed = username.trim();
-      const record = users[trimmed];
-      if (!record || record.password !== password) {
-        return { success: false, message: 'Usuario o contraseña incorrectos.' };
+    const bootstrapSession = async () => {
+      const token = getStoredAuthToken();
+      if (!token) {
+        if (active) {
+          setLoading(false);
+        }
+        return;
       }
-      setCurrentUsername(trimmed);
-      return { success: true };
-    },
-    [users],
-  );
 
-  const logout = useCallback(() => {
-    setCurrentUsername(null);
+      try {
+        const currentUser = await fetchCurrentUser();
+        if (active) {
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error("fetchCurrentUser failed", error);
+        setStoredAuthToken(null);
+        if (active) {
+          setUser(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    bootstrapSession();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const changePassword = useCallback(
-    (currentPassword, newPassword) => {
-      if (!currentUsername) {
-        return { success: false, message: 'Debes iniciar sesión para cambiar la contraseña.' };
-      }
-      const record = users[currentUsername];
-      if (record.password !== currentPassword) {
-        return { success: false, message: 'La contraseña actual no coincide.' };
-      }
-      setUsers((prev) => ({
-        ...prev,
-        [currentUsername]: { ...record, password: newPassword },
-      }));
-      return { success: true, message: 'Contraseña actualizada con éxito.' };
-    },
-    [currentUsername, users],
-  );
+  const login = useCallback(async (username, password) => {
+    try {
+      const data = await loginRequest(username, password);
+      setUser(data.user);
+      return { success: true };
+    } catch (error) {
+      console.error("loginRequest failed", error);
+      const message = error?.response?.data?.detail ?? "Usuario o contraseña incorrectos.";
+      return { success: false, message };
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    logoutRequest();
+    setUser(null);
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    try {
+      const data = await changePasswordRequest(currentPassword, newPassword);
+      setUser(data.user);
+      return { success: true, message: data.message };
+    } catch (error) {
+      console.error("changePasswordRequest failed", error);
+      return {
+        success: false,
+        message: error?.response?.data?.detail ?? "No se pudo actualizar la contraseña.",
+      };
+    }
+  }, []);
+
+  const saveNotificationSettings = useCallback(async (notificationEmail, notificationEnabled = true) => {
+    try {
+      const updatedUser = await updateNotificationSettings(notificationEmail, notificationEnabled);
+      setUser(updatedUser);
+      return { success: true, message: "Correo de notificación guardado." };
+    } catch (error) {
+      console.error("updateNotificationSettings failed", error);
+      return {
+        success: false,
+        message: error?.response?.data?.detail ?? "No se pudo guardar el correo de notificación.",
+      };
+    }
+  }, []);
 
   const value = useMemo(
     () => ({
-      isAuthenticated,
+      isAuthenticated: Boolean(user),
       user,
+      loading,
       login,
       logout,
       changePassword,
+      saveNotificationSettings,
     }),
-    [isAuthenticated, user, login, logout, changePassword],
+    [user, loading, login, logout, changePassword, saveNotificationSettings],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

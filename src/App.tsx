@@ -1,6 +1,6 @@
 import "./styles/index.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Sidebar from "./components/layout/Sidebar.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
@@ -11,11 +11,25 @@ import { getPageComponent } from "./routes/AppRoutes.jsx";
 import { useAlertsStore } from "./store/alerts";
 
 const AppShell = () => {
-  const { isAuthenticated, login, logout } = useAuth();
+  const { isAuthenticated, loading, login, logout, user } = useAuth();
   const { selectedAlert, setSelectedAlert } = useAlertsStore();
   const [page, setPage] = useState("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (page === "zeek-lab" && user?.role !== "admin") {
+      setPage("dashboard");
+    }
+  }, [page, user]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-200">
+        Validando sesión...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={login} />;

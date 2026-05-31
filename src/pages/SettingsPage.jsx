@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '../components/common/Button.jsx';
 import Card from '../components/common/Card.jsx';
@@ -8,17 +8,23 @@ import { constants } from '../config/constants.js';
 import { useAuth } from '../hooks/useAuth.js';
 
 const SettingsPage = () => {
-  const [email, setEmail] = useState(constants.SUPPORT_EMAIL || 'encargado.ti@colegio.edu.pe');
+  const [email, setEmail] = useState('');
   const [notification, setNotification] = useState(null);
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
-  const { user, changePassword } = useAuth();
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
+  const { user, changePassword, saveNotificationSettings } = useAuth();
 
   const showNotification = (message, isError = false) => {
     setNotification({ message, isError });
     setTimeout(() => setNotification(null), 3000);
   };
+
+  useEffect(() => {
+    setEmail(user?.notification_email || '');
+  }, [user?.notification_email]);
 
   return (
     <div className="p-8 text-white max-w-4xl mx-auto">
@@ -37,13 +43,19 @@ const SettingsPage = () => {
           <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Seguridad de Cuenta</h2>
           <form
             className="space-y-4"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
               if (newPass !== confirmPass) {
                 showNotification('Las contraseñas no coinciden.', true);
                 return;
               }
-              const response = changePassword(currentPass, newPass);
+              if (!newPass.trim()) {
+                showNotification('La nueva contraseña no puede estar vacía.', true);
+                return;
+              }
+              setPasswordSaving(true);
+              const response = await changePassword(currentPass, newPass);
+              setPasswordSaving(false);
               showNotification(response.message, !response.success);
               if (response.success) {
                 setCurrentPass('');
@@ -83,7 +95,9 @@ const SettingsPage = () => {
               </div>
             </div>
             <div className="text-right">
-              <Button type="submit">Cambiar Contraseña</Button>
+              <Button type="submit" disabled={passwordSaving}>
+                {passwordSaving ? 'Guardando...' : 'Cambiar Contraseña'}
+              </Button>
             </div>
           </form>
         </Card>
@@ -91,17 +105,28 @@ const SettingsPage = () => {
           <h2 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Configuración de Notificaciones</h2>
           <form
             className="space-y-4"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              showNotification('Correo de notificación guardado.');
+              setEmailSaving(true);
+              const response = await saveNotificationSettings(email, Boolean(email.trim()));
+              setEmailSaving(false);
+              showNotification(response.message, !response.success);
             }}
           >
             <div>
               <Label htmlFor="email">Correo para Alertas Críticas</Label>
-              <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={constants.SUPPORT_EMAIL || 'encargado.ti@colegio.edu.pe'}
+              />
             </div>
             <div className="text-right">
-              <Button type="submit">Guardar Correo</Button>
+              <Button type="submit" disabled={emailSaving}>
+                {emailSaving ? 'Guardando...' : 'Guardar Correo'}
+              </Button>
             </div>
           </form>
         </Card>

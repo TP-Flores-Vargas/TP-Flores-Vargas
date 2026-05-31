@@ -58,6 +58,41 @@ export const defaultFilters = {
   query: "",
 };
 
+const alertMatchesFilters = (alert: Alert, filters: AlertsState["filters"]) => {
+  const matchesSeverity =
+    filters.severity.length === 0 || filters.severity.includes(alert.severity as Severity);
+  const matchesAttackType =
+    filters.attack_type.length === 0 || filters.attack_type.includes(alert.attack_type as AttackType);
+  const matchesProtocol =
+    filters.protocol.length === 0 || filters.protocol.includes(alert.protocol as Protocol);
+  const matchesQuery =
+    !filters.query ||
+    [
+      alert.src_ip,
+      alert.dst_ip,
+      alert.rule_id,
+      alert.rule_name,
+      alert.attack_type,
+      alert.severity,
+      alert.protocol,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(filters.query.toLowerCase());
+  const alertTimestamp = dayjs(alert.timestamp);
+  const matchesFrom = !filters.from_ts || !alertTimestamp.isBefore(dayjs(filters.from_ts));
+  const matchesTo = !filters.to_ts || !alertTimestamp.isAfter(dayjs(filters.to_ts));
+
+  return (
+    matchesSeverity &&
+    matchesAttackType &&
+    matchesProtocol &&
+    matchesQuery &&
+    matchesFrom &&
+    matchesTo
+  );
+};
+
 export const useAlertsStore = create<AlertsState>((set, get) => ({
   items: [],
   total: 0,
@@ -134,14 +169,22 @@ export const useAlertsStore = create<AlertsState>((set, get) => ({
       return;
     }
     const source = createAlertsEventSource();
-    source.onmessage = (event) => {
+    const handleIncomingAlert = (event: MessageEvent) => {
       try {
         const payload = JSON.parse(event.data) as Alert;
         set((state) => {
-          const nextItems = [payload, ...state.items].slice(0, state.pageSize);
+          const alreadyExists = state.items.some((item) => item.id === payload.id);
+          const matchesCurrentFilters = alertMatchesFilters(payload, state.filters);
+          const shouldInsert = !alreadyExists && state.page === 1 && matchesCurrentFilters;
+          const nextItems = shouldInsert ? [payload, ...state.items].slice(0, state.pageSize) : state.items;
           const highlights = { ...state.highlights, [payload.id]: Date.now() };
-          return { items: nextItems, highlights };
+          return {
+            items: nextItems,
+            total: matchesCurrentFilters && !alreadyExists ? state.total + 1 : state.total,
+            highlights,
+          };
         });
+        void get().refreshMetrics();
         setTimeout(() => {
           set((state) => {
             const highlights = { ...state.highlights };
@@ -153,6 +196,8 @@ export const useAlertsStore = create<AlertsState>((set, get) => ({
         console.error("SSE parse error", err);
       }
     };
+    source.onmessage = handleIncomingAlert;
+    source.addEventListener("alert", handleIncomingAlert);
     source.onerror = (error) => {
       console.error("SSE error", error);
       source.close();

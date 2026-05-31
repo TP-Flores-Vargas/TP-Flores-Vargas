@@ -6,13 +6,17 @@ import Input from '../components/common/Input.jsx';
 import Label from '../components/common/Label.jsx';
 
 const LoginPage = ({ onLogin }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = onLogin?.(username, password);
+    setSubmitting(true);
+    setError('');
+    const result = await onLogin?.(username, password);
+    setSubmitting(false);
     if (result?.success) {
       return;
     }
@@ -54,8 +58,8 @@ const LoginPage = ({ onLogin }) => {
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <div>
-            <Button type="submit" className="w-full">
-              Ingresar
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? 'Validando...' : 'Ingresar'}
             </Button>
           </div>
         </form>

@@ -12,6 +12,7 @@ from .models import (
     ModelLabelEnum,
     ProtocolEnum,
     SeverityEnum,
+    UserRoleEnum,
 )
 
 
@@ -131,3 +132,43 @@ class ModelPerformanceMetrics(BaseModel):
     avg_latency_ms: float
     attack_type_stats: List[AttackTypeStat]
     dataset_breakdown: List[DatasetBreakdownEntry]
+
+
+class UserRead(BaseModel):
+    id: uuid.UUID
+    username: str
+    role: UserRoleEnum
+    display_name: str
+    notification_email: str | None = None
+    notification_enabled: bool = True
+
+    class Config:
+        from_attributes = True
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserRead
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class ChangePasswordResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserRead
+    message: str
+
+
+class NotificationSettingsUpdate(BaseModel):
+    notification_email: str | None = None
+    notification_enabled: bool = True
