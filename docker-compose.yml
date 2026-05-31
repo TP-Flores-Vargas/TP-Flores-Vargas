@@ -47,7 +47,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: ids-frontend
     ports:
-      - "5173:80"
+      - "80:80"
     depends_on:
       - backend
     networks:
