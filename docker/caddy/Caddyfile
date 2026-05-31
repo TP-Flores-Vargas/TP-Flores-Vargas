@@ -1,0 +1,4 @@
+{$CADDY_HOSTS} {
+    encode gzip zstd
+    reverse_proxy frontend:80
+}

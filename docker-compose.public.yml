@@ -1,0 +1,77 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ids-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ids
+      POSTGRES_USER: ids
+      POSTGRES_PASSWORD: ids
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ids -d ids"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - ids-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ids-backend
+    restart: unless-stopped
+    environment:
+      - UVICORN_WORKERS=1
+      - DATABASE_URL=postgresql+psycopg://ids:ids@db:5432/ids
+      - INGESTION_MODE=${INGESTION_MODE:-SYNTHETIC_SEED}
+      - SYNTHETIC_SEED_COUNT=${SYNTHETIC_SEED_COUNT:-300}
+      - SYNTHETIC_AUTOSTART=${SYNTHETIC_AUTOSTART:-true}
+      - SYNTHETIC_RATE_PER_MIN=${SYNTHETIC_RATE_PER_MIN:-4}
+      - STREAM_MODE=${STREAM_MODE:-SSE}
+      - AUTH_SECRET=${AUTH_SECRET:-dev-only-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ids-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ids-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - ids-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: ids-caddy
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CADDY_HOSTS=${CADDY_HOSTS:-edunids.app, www.edunids.app}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - ids-net
+
+networks:
+  ids-net:
+    driver: bridge
+
+volumes:
+  caddy_config:
+  caddy_data:
+  pgdata:
