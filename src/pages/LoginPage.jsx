@@ -29,10 +29,10 @@ const LoginPage = ({ onLogin }) => {
         <div className="text-center">
           <ShieldIcon className="w-16 h-16 mx-auto text-blue-500" />
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">
-            Sistema de Detección de Intrusiones
+            EduNIDS
           </h1>
           <p className="mt-2 text-sm text-gray-400">
-            Consola de monitoreo para colegios · Proyecto de IDS con Machine Learning
+            Educational Network Intrusion Detection System
           </p>
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
