@@ -31,8 +31,11 @@ const LoginPage = ({ onLogin }) => {
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">
             EduNIDS
           </h1>
-          <p className="mt-2 text-sm text-gray-400">
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">
             Educational Network Intrusion Detection System
+          </h1>
+          <p className="mt-2 text-sm text-gray-400">
+            Proyecto de IDS con Machine Learning para el monitoreo de redes educativas.
           </p>
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
